@@ -1,0 +1,235 @@
+generic_name,tier,source_status,start_date,end_date,n_package_variants,dosage_form,therapeutic_category
+Atropine Sulfate Injection,2,To Be Discontinued,2012-01-01,,18,Injection,Anesthesia; Neurology; Pediatric
+Fentanyl Citrate Injection,2,Current,2012-01-01,,19,Injection,Analgesia/Addiction; Pediatric
+Lidocaine Hydrochloride Injection,2,To Be Discontinued,2012-02-22,,63,Injection,Anesthesia; Pediatric; Cardiovascular; Analgesia/Addiction
+"Epinephrine Bitartrate, Lidocaine Hydrochloride Injection",2,Current,2012-02-22,,22,Injection,Anesthesia; Pediatric
+"Cefotaxime Sodium Powder, for Solution",2,Current,2015-02-17,,6,"Powder, For Solution",Anti-Infective; Pediatric
+Sodium Acetate Injection,2,Current,2016-02-03,,13,Injection,Endocrinology/Metabolism; Gastroenterology; Pediatric; Total Parenteral Nutrition
+Sodium Bicarbonate Injection,2,To Be Discontinued,2017-03-01,,19,Injection,Endocrinology/Metabolism; Gastroenterology; Pediatric
+Morphine Sulfate Injection,2,Current,2017-10-31,,24,Injection,Analgesia/Addiction
+Hydromorphone Hydrochloride Injection,2,Current,2017-10-31,,26,Injection,Analgesia/Addiction
+Dobutamine Hydrochloride Injection,2,To Be Discontinued,2017-11-06,,11,Injection,Cardiovascular; Pediatric; Renal
+Dopamine Hydrochloride Injection,2,To Be Discontinued,2017-11-06,,12,Injection,Cardiovascular
+Heparin Sodium Injection,2,Current,2017-11-14,,8,Injection,Hematology
+Bumetanide Injection,2,Current,2017-12-13,,12,Injection,Cardiovascular
+Bupivacaine Hydrochloride Injection,2,To Be Discontinued,2018-02-20,,57,Injection,Anesthesia; Analgesia/Addiction
+"Bupivacaine Hydrochloride, Epinephrine Bitartrate Injection",2,Current,2018-02-20,,20,Injection,Anesthesia
+Ketorolac Tromethamine Injection,2,Current,2018-03-23,,25,Injection,Analgesia/Addiction
+Ropivacaine Hydrochloride Injection,2,Current,2018-03-23,,46,Injection,Anesthesia
+Lorazepam Injection,2,Current,2018-05-03,,11,Injection,Neurology
+Dexamethasone Sodium Phosphate Injection,2,Current,2019-02-08,,18,Injection,Dermatology; Endocrinology/Metabolism; Gastroenterology; Hematology; Neurology; Oncology; Ophthalmology; Other; Pulmonary/Allergy; Rheumatology
+Echothiophate Iodide Ophthalmic Solution,2,Current,2019-09-24,,1,Ophthalmic Solution,Ophthalmology
+"Rifapentine Tablet, Film Coated",2,Current,2020-03-25,,1,Tablet,Anti-Infective
+Midazolam Hydrochloride Injection,2,Current,2020-04-02,,26,Injection,Anesthesia; Neurology
+Furosemide Injection,2,To Be Discontinued,2020-04-07,,30,Injection,Cardiovascular
+Dexmedetomidine Hydrochloride Injection,2,To Be Discontinued,2020-04-10,,57,Injection,Anesthesia
+Amino Acid Injection,2,Current,2020-12-08,,16,Injection,Gastroenterology
+Azacitidine Injection,2,Current,2020-12-18,,9,Injection,Oncology
+Valproate Sodium Injection,2,Current,2020-12-30,,2,Injection,Neurology
+Rifampin Injection,2,To Be Discontinued,2021-02-17,,4,Injection,Anti-Infective
+Desmopressin Acetate Spray,2,Current,2021-03-12,,4,Spray,Hematology
+Triamcinolone Hexacetonide Injection,2,Current,2021-05-04,,1,Injection,Rheumatology
+Triamcinolone Acetonide Injection,2,Current,2021-09-27,,1,Injection,Ophthalmology
+Sterile Water Injection,2,Current,2021-11-23,,12,Injection,Other
+Methylprednisolone Acetate Injection,2,Current,2021-12-15,,23,Injection,Rheumatology
+Rifampin Capsule,2,Current,2021-12-22,,9,Capsule,Anti-Infective
+Dextrose Monohydrate 50% Injection,2,To Be Discontinued,2022-01-13,,5,Injection,Endocrinology/Metabolism; Gastroenterology; Pediatric
+Metronidazole Injection,2,Current,2022-01-13,,4,Injection,Anti-Infective
+Dextrose Monohydrate 5% Injection,2,Current,2022-02-14,,36,Injection,Endocrinology/Metabolism; Gastroenterology; Other; Pediatric
+Dextrose Monohydrate 10% Injection,2,Current,2022-03-01,,13,Injection,Endocrinology/Metabolism; Gastroenterology; Other; Pediatric
+Conivaptan Hydrochloride Injection,2,Current,2022-03-14,,1,Injection,Cardiovascular
+Sufentanil Citrate Injection,2,Current,2022-05-03,,4,Injection,Analgesia/Addiction; Pediatric
+Remifentanil Hydrochloride Injection,2,Current,2022-06-28,,9,Injection,Analgesia/Addiction
+"Streptozocin Powder, For Solution",2,Current,2022-07-12,,2,"Powder, For Solution",Oncology
+Flurazepam Hydrochloride Capsule,2,Current,2022-08-03,,6,Capsule,Oncology; Other; Neurology
+Etomidate Injection,2,Current,2022-10-05,,18,Injection,Anesthesia
+"Amphetamine Aspartate Monohydrate, Amphetamine Sulfate, Dextroamphetamine Saccharate, Dextroamphetamine Sulfate Tablet",2,Current,2022-10-12,,73,Tablet,Psychiatry
+Albuterol Sulfate Solution,2,Current,2022-10-25,,3,Solution,Pediatric; Pulmonary/Allergy
+Quinapril Hydrochloride Tablet,2,To Be Discontinued,2023-01-19,,24,Tablet,Cardiovascular
+Quinapril/Hydrochlorothiazide Tablet,2,Current,2023-01-19,,9,Tablet,Cardiovascular
+Rocuronium Bromide Injection,2,Current,2023-02-15,,26,Injection,Anesthesia
+Clonazepam Tablet,2,Current,2023-03-10,,40,Tablet,Neurology; Pediatric; Psychiatry
+Methotrexate Sodium Injection,2,Current,2023-03-13,,14,Injection,Rheumatology; Oncology
+Methamphetamine Hydrochloride Tablet,1,Resolved,2023-03-17,2026-01-27,2,Tablet,Psychiatry
+Clindamycin Phosphate Injection,2,To Be Discontinued,2023-03-21,,26,Injection,Anti-Infective
+Hydrocortisone Sodium Succinate Injection,1,Resolved,2023-03-24,2026-02-24,8,Injection,Pulmonary/Allergy; Dermatology; Endocrinology/Metabolism; Gastroenterology; Hematology; Neurology; Oncology; Ophthalmology; Pediatric; Renal; Rheumatology
+Penicillin G Benzathine Injection,2,Current,2023-04-26,,4,Injection,Anti-Infective
+Carboplatin Injection,2,To Be Discontinued,2023-04-28,,35,Injection,Oncology
+Sterile Water Irrigant,2,Current,2023-04-28,,9,Irrigant,Gastroenterology; Other; Pediatric
+Prazosin Hydrochloride Capsule,2,To Be Discontinued,2023-04-28,,3,Capsule,Cardiovascular
+"Lisdexamfetamine Dimesylate Tablet, Chewable",2,Current,2023-07-14,,18,"Tablet, Chewable",Psychiatry
+Lisdexamfetamine Dimesylate Capsule,2,Current,2023-07-14,,90,Capsule,Psychiatry
+Liraglutide Injection,2,To Be Discontinued,2023-07-18,,10,Injection,Endocrinology/Metabolism
+"Methylphenidate Hydrochloride Tablet, Extended Release",2,Current,2023-07-26,,34,Tablet,Psychiatry
+Propranolol Hydrochloride Injection,2,Current,2023-10-31,,2,Injection,Cardiovascular
+Cromolyn Sodium Concentrate,2,Current,2023-11-03,,6,Concentrate,Pulmonary/Allergy
+Promethazine Hydrochloride Injection,2,Current,2023-11-21,,10,Injection,Analgesia/Addiction; Gastroenterology; Pediatric; Pulmonary/Allergy; Other
+Technetium TC-99M Pyrophosphate Kit Injection,2,Current,2023-12-27,,3,Injection,Medical Imaging
+Riluzole Oral Suspension,2,Current,2024-01-26,,4,Oral Suspension,Neurology
+Naltrexone Hydrochloride Tablet,1,Resolved,2024-02-29,2026-02-11,15,Tablet,Analgesia/Addiction
+Dextrose Monohydrate 70% Injection,2,Current,2024-10-11,,4,Injection,Endocrinology/Metabolism; Gastroenterology; Other; Pediatric
+Hydroxocobalamin Injection,2,Current,2024-11-04,,2,Injection,Other
+Peginterferon alfa-2a Injection,2,Current,2025-01-24,,2,Injection,Antiviral
+"Methylphenidate Film, Extended Release",2,Current,2025-02-28,,4,"Film, Extended Release",Psychiatry
+Bacitracin Ophthalmic Ointment,2,Current,2025-03-03,,1,Ophthalmic Ointment,Anti-Infective; Ophthalmology
+Meperidine Hydrochloride Injection,2,Current,2025-05-30,,10,Injection,Analgesia/Addiction
+Insulin Degludec Injection,2,To Be Discontinued,2025-07-21,,3,Injection,Endocrinology/Metabolism
+Insulin Aspart Injection,2,To Be Discontinued,2025-07-21,,3,Injection,Endocrinology/Metabolism
+Insulin Aspart Protamine and Insulin Aspart Mix 70/30 Injectable Suspension,2,To Be Discontinued,2025-07-21,,2,Injectable Suspension,Endocrinology/Metabolism
+Amantadine Hydrochloride Tablet,2,To Be Discontinued,2025-07-23,,3,Tablet,Antiviral; Neurology
+"Potassium Chloride Tablet, Extended Release",2,To Be Discontinued,2025-07-23,,14,Tablet,Endocrinology/Metabolism; Gastroenterology
+Amantadine Hydrochloride Capsule,2,To Be Discontinued,2025-07-23,,2,Capsule,Antiviral; Neurology
+"Glipizide Tablet, Extended Release",2,To Be Discontinued,2025-07-24,,1,Tablet,Endocrinology/Metabolism
+Voriconazole Tablet,2,To Be Discontinued,2025-07-28,,1,Tablet,Anti-Infective
+Esterified Estrogens Tablet,2,To Be Discontinued,2025-07-29,,4,Tablet,Endocrinology/Metabolism
+Adefovir Dipivoxil Tablet,2,To Be Discontinued,2025-07-29,,1,Tablet,Antiviral
+Clindamycin Phosphate; Benzoyl Peroxide Gel,2,To Be Discontinued,2025-08-01,,1,Gel,Dermatology
+Irinotecan Hydrochloride Injection,2,To Be Discontinued,2025-08-04,,6,Injection,Oncology
+Amphotericin B Injection,2,To Be Discontinued,2025-08-08,,1,Injection,Anti-Infective
+Desipramine Hydrochloride Tablet,2,To Be Discontinued,2025-08-12,,6,Tablet,Psychiatry
+Palivizumab Injection,2,To Be Discontinued,2025-08-13,,2,Injection,Antiviral
+Celecoxib Capsule,2,To Be Discontinued,2025-08-15,,6,Capsule,Analgesia/Addiction
+Finasteride Tablet,2,To Be Discontinued,2025-08-19,,3,Tablet,Urology
+Methotrexate Injection,2,To Be Discontinued,2025-08-29,,7,Injection,Rheumatology
+Azelastine Hydrochloride; Fluticasone Propionate Nasal Spray,2,To Be Discontinued,2025-09-04,,1,Nasal Spray,Pulmonary/Allergy
+Vecuronium Bromide Injection,2,To Be Discontinued,2025-09-08,,1,Injection,Anesthesia
+Sumatriptan Nasal Spray,2,To Be Discontinued,2025-09-08,,2,Nasal Spray,Neurology
+Azithromycin Injection,2,To Be Discontinued,2025-09-09,,2,Injection,Anti-Infective
+Vancomycin Hydrochloride Injection,2,To Be Discontinued,2025-09-09,,3,Injection,Anti-Infective
+Gemcitabine Hydrochloride Injection,2,To Be Discontinued,2025-09-11,,3,Injection,Oncology
+Homatropine Methylbromide and Hydrocodone Bitartrate Syrup,2,To Be Discontinued,2025-09-11,,1,Syrup,Analgesia/Addiction
+Oxycodone Hydrochloride Oral Solution,2,To Be Discontinued,2025-09-11,,1,Oral Solution,Analgesia/Addiction
+Desonide Lotion,2,To Be Discontinued,2025-09-18,,2,Lotion,Dermatology
+Fluphenazine Hydrochloride Tablet,2,To Be Discontinued,2025-09-18,,4,Tablet,Neurology; Psychiatry
+Pilocarpine Hydrochloride Tablet,2,To Be Discontinued,2025-09-19,,2,Tablet,Other
+Obeticholic Acid Tablet,2,To Be Discontinued,2025-09-19,,2,Tablet,Gastroenterology
+Triazolam Tablet,2,To Be Discontinued,2025-09-29,,1,Tablet,Psychiatry
+Fondaparinux Sodium Injection,2,To Be Discontinued,2025-09-29,,4,Injection,Hematology
+Tafamidis Meglumine Capsule,2,To Be Discontinued,2025-09-29,,1,Capsule,Cardiovascular
+Oseltamivir Phosphate Capsule,2,To Be Discontinued,2025-09-30,,1,Capsule,Antiviral
+Hydrochlorothiazide; Quinapril Hydrochloride Tablet,2,To Be Discontinued,2025-10-01,,2,Tablet,Cardiovascular
+Cobicistat Tablet,2,To Be Discontinued,2025-10-07,,1,Tablet,Antiviral
+Paricalcitol Capsule,2,To Be Discontinued,2025-10-07,,2,Capsule,Endocrinology/Metabolism
+Omeprazole Delayed Release Capsule,2,To Be Discontinued,2025-10-09,,10,,Gastroenterology
+Adalimumab-afzb Injection,2,To Be Discontinued,2025-10-09,,1,Injection,Rheumatology
+Pemetrexed Disodium Injection,2,To Be Discontinued,2025-10-10,,4,Injection,Oncology
+Vigabatrin Oral Solution,2,To Be Discontinued,2025-10-16,,1,Oral Solution,Neurology
+Voriconazole Injection,2,To Be Discontinued,2025-10-16,,1,Injection,Antiviral
+Elbasvir; Grazoprevir Tablet,2,To Be Discontinued,2025-10-17,,1,Tablet,Antiviral
+Oxaliplatin Injection,2,To Be Discontinued,2025-10-20,,6,Injection,Oncology
+Tranylcypromine Sulfate Tablet,2,To Be Discontinued,2025-10-21,,1,Tablet,Psychiatry
+Busulfan Injection,2,To Be Discontinued,2025-10-24,,1,Injection,Hematology
+Insulin Lispro Injection,2,To Be Discontinued,2025-10-24,,1,Injection,Endocrinology/Metabolism
+Insulin Lispro-aabc Injection,2,To Be Discontinued,2025-10-24,,2,Injection,Endocrinology/Metabolism
+Insulin Glargine Injection,2,To Be Discontinued,2025-10-24,,1,Injection,Endocrinology/Metabolism
+Pramlintide Acetate Injection,2,To Be Discontinued,2025-10-27,,2,Injection,Endocrinology/Metabolism
+Moxifloxacin Injection,2,To Be Discontinued,2025-10-29,,1,Injection,Anti-Infective
+Phenobarbital Tablet,2,To Be Discontinued,2025-10-31,,8,Tablet,Analgesia/Addiction; Neurology; Other
+Acetaminophen; Oxycodone Hydrochloride Tablet,2,To Be Discontinued,2025-11-03,,6,Tablet,Analgesia/Addiction
+Everolimus Tablet,2,To Be Discontinued,2025-11-03,,11,Tablet,Transplant
+Lasmiditan Succinate Tablet,2,To Be Discontinued,2025-11-03,,6,Tablet,Neurology
+Scopolamine Transdermal System,2,To Be Discontinued,2025-11-03,,1,Transdermal System,Gastroenterology; Neurology; Other
+Atazanavir Sulfate; Cobicistat Tablet,2,To Be Discontinued,2025-11-03,,1,Tablet,Antiviral
+Epinephrine Injection,2,To Be Discontinued,2025-11-07,,2,Injection,Cardiovascular; Endocrinology/Metabolism
+Deferiprone Tablet,2,To Be Discontinued,2025-11-07,,1,Tablet,Hematology
+Ketamine Hydrochloride Injection,2,To Be Discontinued,2025-11-07,,1,Injection,Anesthesia
+Calcium Chloride Injection,2,To Be Discontinued,2025-11-07,,1,Injection,Cardiovascular; Endocrinology/Metabolism
+Frovatriptan Succinate Tablet,2,To Be Discontinued,2025-11-12,,2,Tablet,Neurology
+"Guanfacine Hydrochloride Tablet, Extended Release",2,To Be Discontinued,2025-11-13,,4,Tablet,Psychiatry
+Adalimumab-ryvk Kit,2,To Be Discontinued,2025-11-13,,1,,Rheumatology
+Cetrorelix Acetate Injection,2,To Be Discontinued,2025-11-13,,1,Injection,Reproductive
+Ceftazidime Injection,2,To Be Discontinued,2025-11-14,,2,Injection,Anti-Infective
+Somatropin Injection,2,To Be Discontinued,2025-11-14,,1,Injection,Endocrinology/Metabolism
+Palonosetron Hydrochloride Injection,2,To Be Discontinued,2025-11-14,,1,Injection,Gastroenterology
+"Montelukast Sodium Tablet, Chewable",2,To Be Discontinued,2025-11-17,,1,"Tablet, Chewable",Pulmonary/Allergy
+Valsartan Tablet,2,To Be Discontinued,2025-11-19,,4,Tablet,Cardiovascular
+Anagrelide Hydrochloride Capsule,2,To Be Discontinued,2025-11-19,,2,Capsule,Hematology
+Hydrochlorothiazide Capsule,2,To Be Discontinued,2025-11-19,,2,Capsule,Cardiovascular
+Verapamil Hydrochloride Injection,2,To Be Discontinued,2025-11-21,,1,Injection,Cardiovascular
+Nilutamide Tablet,2,To Be Discontinued,2025-12-01,,2,Tablet,Oncology
+Phenoxybenzamine Hydrochloride Capsule,2,To Be Discontinued,2025-12-01,,3,Capsule,Cardiovascular
+Posaconazole Injection,2,To Be Discontinued,2025-12-02,,1,Injection,Anti-Infective
+Sodium Chloride 0.9% Injection,2,To Be Discontinued,2025-12-03,,3,Injection,Gastroenterology; Other; Renal
+Calcitriol Capsule,2,To Be Discontinued,2025-12-04,,2,Capsule,Endocrinology/Metabolism
+Ampicillin Sodium Injection,2,To Be Discontinued,2025-12-08,,5,Injection,Anti-Infective
+Spironolactone Tablet,2,To Be Discontinued,2025-12-10,,2,Tablet,Cardiovascular
+Doxercalciferol Injection,2,To Be Discontinued,2025-12-10,,3,Injection,Endocrinology/Metabolism
+"Carbamazepine Capsule, Extended Release",2,To Be Discontinued,2025-12-19,,3,"Capsule, Extended Release",Neurology
+Morphine Sulfate Tablet,2,To Be Discontinued,2025-12-22,,2,Tablet,Analgesia/Addiction
+Mirikizumab-mrkz Injection,2,To Be Discontinued,2025-12-22,,2,Injection,Gastroenterology; Other
+Sodium Oxybate Solution,2,To Be Discontinued,2025-12-29,,1,Solution,Psychiatry
+Diltiazem Hydrochloride Injection,2,To Be Discontinued,2026-01-05,,1,Injection,Cardiovascular
+Hydroxychloroquine Sulfate Tablet,2,To Be Discontinued,2026-01-05,,1,Tablet,Anti-Infective; Other; Rheumatology
+Imipenem and Cilastatin Injection,2,To Be Discontinued,2026-01-08,,1,Injection,Anti-Infective
+Haloperidol Decanoate Injection,2,To Be Discontinued,2026-01-09,,2,Injection,Psychiatry
+Caspofungin Acetate Injection,2,To Be Discontinued,2026-01-12,,3,Injection,Anti-Infective
+Neostigmine Methylsulfate Injection,2,To Be Discontinued,2026-01-12,,1,Injection,Analgesia/Addiction
+"Doxylamine Succinate and Pyridoxine  Hydrochloride Tablet, Delayed Release",2,To Be Discontinued,2026-01-12,,1,Tablet,Other
+Doxycycline Hyclate Tablet,2,To Be Discontinued,2026-01-12,,2,Tablet,Anti-Infective
+Adalimumab-adaz Injection,2,To Be Discontinued,2026-01-13,,5,Injection,Rheumatology
+Piperacillin and Tazobactam Injection,2,To Be Discontinued,2026-01-20,,1,Injection,Anti-Infective
+Maraviroc Solution,2,To Be Discontinued,2026-01-20,,1,Solution,Antiviral
+Riboflavin 5-phosphate  Ophthalmic Solution,2,To Be Discontinued,2026-01-20,,1,Ophthalmic Solution,Ophthalmology
+"Fluvastatin Sodium Tablet, Extended Release",2,To Be Discontinued,2026-01-27,,3,Tablet,Cardiovascular
+Benztropine Mesylate Injection,2,To Be Discontinued,2026-01-27,,1,Injection,Neurology
+Podofilox Topical Gel,2,To Be Discontinued,2026-01-28,,1,Topical Gel,Dermatology; Other
+Pindolol Tablet,2,To Be Discontinued,2026-01-30,,2,Tablet,Cardiovascular
+Gemfibrozil Tablet,2,To Be Discontinued,2026-02-10,,1,Tablet,Endocrinology/Metabolism
+Chlorothiazide Oral Suspension,2,To Be Discontinued,2026-02-10,,1,Oral Suspension,Cardiovascular
+Cefepime Hydrochloride Injection,2,To Be Discontinued,2026-02-10,,2,Injection,Anti-Infective
+Allopurinol Tablet,2,To Be Discontinued,2026-02-19,,4,Tablet,Oncology; Renal; Rheumatology
+Decitabine Injection,2,To Be Discontinued,2026-02-20,,2,Injection,Oncology
+Docetaxel Injection,2,To Be Discontinued,2026-02-20,,2,Injection,Oncology
+Arsenic Trioxide Injection,2,To Be Discontinued,2026-02-24,,1,Injection,Oncology
+Lincomycin Hydrochloride Injection,2,To Be Discontinued,2026-02-25,,3,Injection,Anti-Infective
+Clindamycin Hydrochloride Capsule,2,To Be Discontinued,2026-02-25,,3,Capsule,Anti-Infective
+Itraconazole Capsule,2,To Be Discontinued,2026-02-27,,3,Capsule,Anti-Infective; Other
+Clindamycin Palmitate Hydrochloride Injection,2,To Be Discontinued,2026-02-27,,2,Injection,Anti-Infective
+Peritoneal Dialysis Solution,2,To Be Discontinued,2026-03-10,,6,Solution,Renal
+Plerixafor Injection,2,To Be Discontinued,2026-03-13,,1,Injection,Hematology
+Ramelteon Tablet,2,To Be Discontinued,2026-03-19,,2,Tablet,Psychiatry
+Pentamidine Isethionate Injection,2,To Be Discontinued,2026-03-23,,1,Injection,Anti-Infective
+Pilocarpine Hydrochloride Ophthalmic Solution,2,To Be Discontinued,2026-03-24,,5,Ophthalmic Solution,Ophthalmology
+Ivabradine Solution,2,To Be Discontinued,2026-03-24,,1,Solution,Cardiovascular
+Ivabradine Hydrochloride Tablet,2,To Be Discontinued,2026-03-24,,2,Tablet,Cardiovascular
+Nebivolol Hydrochloride Tablet,2,To Be Discontinued,2026-03-25,,16,Tablet,Cardiovascular
+Dapsone Gel,2,To Be Discontinued,2026-03-27,,1,Gel,Dermatology
+Progesterone Vaginal Gel,2,To Be Discontinued,2026-03-27,,1,Vaginal Gel,Urology
+Tazemetostat Hydrobromide Tablet,2,To Be Discontinued,2026-03-27,,1,Tablet,Oncology
+Furosemide Oral Solution,2,Current,2026-03-31,,3,Oral Solution,Cardiovascular
+Icosapent Ethyl Capsule,2,To Be Discontinued,2026-04-01,,2,Capsule,Cardiovascular
+Ursodiol Capsule,2,To Be Discontinued,2026-04-06,,1,Capsule,Other
+Idelalisib Tablet,2,To Be Discontinued,2026-04-07,,2,Tablet,Oncology
+Aprepitant Oral Powder for Suspension,2,To Be Discontinued,2026-04-08,,1,,Gastroenterology
+Fosaprepitant Dimeglumine Injection,2,To Be Discontinued,2026-04-08,,1,Injection,Gastroenterology
+Azithromycin Tablet,2,To Be Discontinued,2026-04-09,,2,Tablet,Anti-Infective
+Nitrofurantoin Oral Suspension,2,To Be Discontinued,2026-04-10,,1,Oral Suspension,Anti-Infective; Other
+Nitroglycerin Ointment,2,To Be Discontinued,2026-04-14,,1,Ointment,Analgesia/Addiction
+Tiagabine Hydrochloride Tablet,2,To Be Discontinued,2026-04-15,,4,Tablet,Neurology
+Isocarboxazid Tablet,2,Current,2026-04-16,,1,Tablet,Psychiatry
+Ketorolac Tromethamine Tablet,2,To Be Discontinued,2026-04-20,,1,Tablet,Analgesia/Addiction
+Palbociclib Capsule,2,To Be Discontinued,2026-04-22,,2,Capsule,Oncology
+Etravirine Tablet,2,To Be Discontinued,2026-04-28,,2,Tablet,Antiviral
+Crinecerfont Capsule,2,To Be Discontinued,2026-04-28,,1,Capsule,Endocrinology/Metabolism
+"Lamotrigine Tablet, Extended Release",2,To Be Discontinued,2026-04-29,,6,Tablet,Neurology
+Cisatracurium Besylate Injection,2,To Be Discontinued,2026-05-06,,2,Injection,Analgesia/Addiction
+Icatibant Acetate Injection,2,To Be Discontinued,2026-05-07,,2,Injection,Hematology
+Sulconazole Nitrate Solution,2,To Be Discontinued,2026-05-08,,3,Solution,Dermatology
+Activated Charcoal Oral Suspension,2,To Be Discontinued,2026-05-15,,5,Oral Suspension,Other
+Gadoterate Meglumine Injection,2,To Be Discontinued,2026-05-21,,8,Injection,Medical Imaging
+Alteplase Injection,2,To Be Discontinued,2026-05-21,,1,Injection,Cardiovascular; Hematology; Neurology
+Iron Sucrose Injection,2,To Be Discontinued,2026-05-21,,1,Injection,Hematology
+"Dehydrated Alcohol Injection, Solution",2,To Be Discontinued,2026-05-27,,1,Injection,Cardiovascular
+Semaglutide Tablet,2,To Be Discontinued,2026-06-04,,3,Tablet,Endocrinology/Metabolism
+Leflunomide Tablet,2,To Be Discontinued,2026-06-08,,5,Tablet,Rheumatology
+Dacomitinib Tablet,2,To Be Discontinued,2026-06-08,,3,Tablet,Oncology
+Ifosfamide Injection,2,Current,2026-06-12,,7,Injection,Oncology; Pediatric
+"Donepezil Hydrochloride; Memantine Hydrochloride Capsule, Extended Release",2,To Be Discontinued,2026-06-15,,2,"Capsule, Extended Release",Neurology
+Lorlatinib Tablet,2,To Be Discontinued,2026-06-15,,1,Tablet,Oncology
+Emtricitabine Capsule,2,To Be Discontinued,2026-06-17,,1,Capsule,Anti-Infective
+Emtricitabine Oral Solution,2,To Be Discontinued,2026-06-17,,1,Oral Solution,Anti-Infective
+Daptomycin Injection,2,To Be Discontinued,2026-06-30,,2,Injection,Anti-Infective
+Gadobutrol Injection,2,To Be Discontinued,2026-06-30,,4,Injection,Medical Imaging
+Desflurane Liquid for Inhalation,2,To Be Discontinued,2026-07-02,,1,,Anesthesia
+Travoprost Ophthalmic Solution,2,To Be Discontinued,2026-07-07,,2,Ophthalmic Solution,Ophthalmology
+Tobramycin Sulfate Injection,2,To Be Discontinued,2026-07-17,,1,Injection,Anti-Infective

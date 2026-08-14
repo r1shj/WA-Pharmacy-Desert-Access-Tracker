@@ -1,0 +1,1095 @@
+# Decisions log
+
+Methodological judgment calls made on this project, in the order they were
+made. Each entry should stand alone — a future reader shouldn't need to
+re-derive the reasoning from the raw data or old conversations. New
+judgment calls get a new entry appended here as they happen, not just
+logged retroactively.
+
+---
+
+## 2026-07-18 — Study population inclusion rule (pharmacy_type)
+
+**Decision:** Of the taxonomy-coded WA pharmacy records, `community_retail`,
+`clinic`, and `compounding` are `included_in_access_analysis=True`.
+`long_term_care`, `mail_order`, `specialty`, `home_infusion`, `military`,
+`managed_care_org`, and `non_pharmacy` are excluded. `unspecified` (generic
+"Pharmacy" taxonomy code), `institutional`, and
+`unclassified_has_pharmacy_taxonomy` are flagged REVIEW rather than
+decided either way. Nothing is deleted — every record keeps its
+`pharmacy_type`/`walk_in_access`/`exclusion_reason` regardless of the
+inclusion call.
+
+**Why:** The access/desert analysis is about physical, walk-in medication
+access points for the general population. Long-term-care and mail-order
+pharmacies are closed-door or delivery-only by design. Military pharmacies
+serve a restricted beneficiary population. Specialty/home-infusion
+pharmacies are typically appointment- or delivery-based, though some do
+have storefronts — excluded by default rather than assumed, with the
+uncertainty noted in `exclusion_reason`. Generic/institutional codes carry
+no sub-type information on their own and genuinely need a human or a
+secondary signal (address type, DBA name) to resolve, so they're routed to
+REVIEW instead of guessed.
+
+**Evidence:** Full taxonomy distribution of the corrected 1,941-record WA
+pull (see `day2/wa_pharmacies_final.csv` and
+`day2/DAY2_ADDENDUM_complete_population.md`). Result: 1,363 included, 104
+excluded, 474 review.
+
+---
+
+## 2026-07-18 — "Unmatched ≠ independent" rule for ownership classification
+
+**Decision:** When Day 3's ownership/chain classification can't match a
+pharmacy's `organization_name`/DBA to a known chain, its ownership status
+must be recorded as `unknown` — never defaulted to `independent`.
+"Independent" is a positive claim that requires actual evidence (e.g., a
+DBA with no match against a maintained chain-name list *and* an
+authorized official who doesn't recur across other NPIs in the dataset,
+or some other corroborating signal) — not just the absence of a chain
+match.
+
+**Why:** Failing to match a chain-name list proves the list is incomplete
+at least as often as it proves the pharmacy is independent. Silently
+defaulting unmatched records to "independent" would systematically inflate
+independent-pharmacy counts by exactly the size of whatever chains happen
+to be missing from the match list, which is an easy and hard-to-detect way
+to bias the whole downstream desert analysis. This decision is made now,
+ahead of Day 3, so the classification logic is built around it from the
+start rather than retrofitted after noticing the bias.
+
+**Evidence:** Day 1 findings already established that `organization_name`
+is frequently a generic corporate/holding-company name (e.g. Albertsons's
+"1918 WINTER STREET OPERATING CO LLC" spanning Safeway, QFC, Haggen, and
+Sav-On banners) rather than the consumer-facing brand — so a naive
+"no obvious chain name → independent" heuristic was already known to be
+unreliable before any matching logic was written.
+
+---
+
+## 2026-07-18 — Classification precedence fix (primary-code rules vs. secondary pharmacy taxonomy)
+
+**Decision:** `classify()` in `day2/classify_pharmacy_type.py` now checks
+"does this record have a pharmacy taxonomy anywhere (primary or
+secondary)?" *before* applying the primary-code-only rule tables
+(`RULES`, `NON_PHARMACY_FALSE_POSITIVES`). If a pharmacy taxonomy exists
+only as a secondary code, the record is routed to
+`unclassified_has_pharmacy_taxonomy` (REVIEW) regardless of what its
+primary code's own rule would have said. Primary-code rules only get the
+final word when no pharmacy taxonomy is present anywhere on the record.
+
+**Why:** The verification pass run before Day 3 found that a record whose
+*primary* taxonomy matched a definitive rule (e.g. a DME supplier, or a
+military pharmacy) was being classified off that primary code alone and
+never reached the "has a pharmacy taxonomy somewhere" fallback — even when
+a secondary taxonomy entry was genuinely pharmacy-related. This is the
+same failure mode as the Day 2 "AMS HOMECARE USA INC" example (DME
+primary, Pharmacy secondary), just not yet fixed in code at that point.
+
+**Evidence:** Rerunning classification on the full 1,941-row corrected
+dataset after the fix: all 42 true secondary-taxonomy records now land in
+REVIEW (up from 18 before the fix). Included count unchanged at 1,363
+(these 24 records were already excluded either way); excluded dropped
+128→104, review rose 450→474. Bartell Drugs (65 records) and the
+no-duplicate-NPI check were confirmed unaffected. Full detail in
+`day2/CLASSIFICATION_FIX.md`.
+
+---
+
+## 2026-07-18 — WA-state filtering must check LOCATION.state explicitly
+
+**Decision:** Every NPPES pull must filter on the `LOCATION` address
+object's `state` field client-side. The API's own `state=` and
+`postal_code=` query parameters are not trustworthy for "physically
+located here" — they match against *any* address on the record, including
+`MAILING`.
+
+**Why:** Discovered while building the county rollup: an out-of-state
+pharmacy chain with a Washington billing/mailing address matches a
+`state=WA` query even with zero WA storefronts. This wasn't a rare edge
+case — it retroactively invalidated over half of the original Day 2 pull.
+
+**Evidence:** Of the original 1,200-capped `state=WA` sample, 640 records
+(53%) had a non-WA `LOCATION` address (concrete examples: a Florida-based
+Genoa Healthcare pharmacy, an Astoria OR pharmacy with a Vancouver WA
+mailing address, a Monterey CA military pharmacy). Of the full 3,364-record
+zip sweep, 1,423 (42%) were non-WA-located. Filtering to
+`LOCATION.state == 'WA'` cut the zip-sweep set to 1,941 confirmed
+WA-located records — validated against Bartell Drugs' known real-world
+footprint (65 WA stores found, matching public knowledge of the chain,
+vs. only 5 visible in the old contaminated sample). Full detail in
+`day2/DAY2_ADDENDUM_complete_population.md`.
+
+---
+
+## 2026-07-18 — NPPES 1,200-result API ceiling and the ZIP-partition workaround
+
+**Decision:** A single NPPES API query (any combination of filters) caps
+out at 1,200 total results (`limit` max 200 × `skip` max 1000, in pages of
+200). To get the true WA population, the pull is partitioned across every
+possible WA ZIP code (98001–99403, the full USPS-assigned range for the
+state — 1,403 candidate codes) using the `postal_code` parameter, since it
+requires an exact 5-digit match (no prefix support — confirmed by testing
+`postal_code=980` before committing to this approach), and results are
+deduped by NPI across partitions.
+
+**Why:** ZIP code partitioning was chosen over city- or county-name
+partitioning because it's a finite, enumerable, USPS-defined key — not
+dependent on any external city/place-name list being complete. A gap in a
+city list would silently under-count; a gap in the ZIP range is a
+visible, checkable assumption (and was in fact double-checked: no
+individual ZIP in the sweep hit its own 1,200 sub-cap, so no further
+sub-partitioning was needed).
+
+**Evidence:** The full 1,403-ZIP sweep was run twice, independently, from
+a cold cache. Both runs returned exactly the same 3,364 unique NPIs (zero
+difference either direction), confirming the pull is complete and stable
+rather than an artifact of API flakiness or an incomplete ZIP range. See
+`day2/pull_wa_pharmacies_by_zip.py` and
+`day2/DAY2_ADDENDUM_complete_population.md`.
+
+---
+
+## 2026-07-18 — Deferred WA DOH facility-license validation rather than automate past a CAPTCHA
+
+**Decision:** Do not attempt to bypass the reCAPTCHA on WA DOH's HELMS
+facility-license lookup to complete the planned 30-50-pharmacy spot-check.
+Document the gap instead of working around it.
+
+**Why:** Bypassing CAPTCHAs is a hard line, not a judgment call to weigh
+case-by-case. The only downloadable DOH dataset (`qxh8-f4bd` on
+data.wa.gov) covers individual practitioner credentials only — confirmed
+by enumerating all 310 distinct `credentialtype` values in it, none of
+which is a facility/business pharmacy license — so there was no bulk data
+path around the CAPTCHA either.
+
+**Evidence:** See `LIMITATIONS.md` for the full writeup, including the
+one available imperfect proxy (NPPES `last_updated` staleness: 82 of
+1,200 sampled records untouched since before 2015).
+
+---
+
+## 2026-07-25 — Ownership classification: officer-repetition threshold and match precedence
+
+**Decision:** A shared `authorized_official` name is only treated as a
+chain signal when it recurs across **3 or more** distinct NPIs (not 2),
+and only after DBA/org-name matching against the chain/health-system/
+government lookup tables has already failed to classify the record. When
+it fires, the result is `ownership_category=chain`,
+`ownership_confidence=medium` (vs. `high` for a direct name match), with
+`parent_organization` naming the shared officer rather than inventing a
+brand name we don't actually know.
+
+**Why:** Two locations sharing an official name is too easily a
+common-name coincidence to trust alone (e.g. a common surname). Three or
+more sharing the exact same first+last name is a much stronger signal,
+consistent with the Day 1 example (one official across 15+
+Albertsons-family locations). Running this check only after name-based
+matching keeps it from ever overriding a confident, evidence-backed
+classification - it only fills gaps.
+
+**Evidence:** Applied to the 1,837 included/review records: 1,004
+classified by direct name match (high confidence), 124 more by officer
+repetition (medium confidence) across 28 distinct unidentified groups
+(sizes 3-23 locations). Full detail in `day3/DAY3_REPORT.md`.
+
+---
+
+## 2026-07-25 — Officer-repetition fallback must not default to "chain" over known health systems/government orgs
+
+**Decision:** Before trusting the officer-repetition fallback, the
+DBA/org-name lookup tables must have reasonable coverage of large
+non-retail multi-location entities (hospitals, health systems, community
+health centers, government/tribal orgs) - otherwise the fallback
+mislabels them as generic "chain," which is simply wrong (a hospital
+system is not a retail chain, even though both are "multi-location single
+ownership").
+
+**Why:** Caught concretely: Seattle Children's Hospital and University of
+Washington Medical Center records were falling through to the officer-
+repetition fallback and getting labeled "Unidentified chain" purely
+because `HEALTH_SYSTEM_PATTERNS` didn't yet include their names.
+
+**Evidence:** Added explicit patterns for Seattle Children's, UW
+Medicine, a broad `COMMUNITY HEALTH` catch-all (covers several
+differently-named WA community health centers/FQHCs at once), and
+`PUBLIC HOSPITAL DIST(RICT)` (WA's special-purpose hospital districts are
+legally government entities). Rerunning moved 65 records from `chain` to
+`health_system`/`government_or_tribal` and shrank the officer-repetition
+fallback group from 38 to 28. This is very likely still incomplete for
+the long tail of WA's ~25+ independently-named regional community health
+centers - remaining unmatched ones are left `unknown` rather than
+guessed, consistent with the "unmatched != independent/anything" rule
+above. See `day3/DAY3_REPORT.md`.
+
+---
+
+## 2026-07-25 — Address dedup: containment-only name matching, not fuzzy ratio
+
+**Decision:** Two records at the same normalized address are only
+considered "substantially similar" in name/DBA if one name is an exact
+match or a full substring of the other (after stripping legal suffixes,
+store numbers, and punctuation) - not a fuzzy similarity score like
+difflib's ratio.
+
+**Why:** Calibrated both approaches against this dataset's own real
+multi-NPI address groups before choosing. Fuzzy ratio scored deceptively
+high (0.71-0.89) on genuinely different pharmacies that happen to share a
+templated name and a campus address - e.g. "Kaiser Permanente Bellevue
+Infusion Pharmacy" vs. "Kaiser Permanente Factoria Pharmacy." Plain
+containment correctly rejected every risky pair tested while still
+catching every real same-store case (Bartell Drugs re-registrations, the
+Day 1 14th Avenue Pharmacy trio, Haggen locations re-registered under
+three different corporate names over the years, "QFC" matching "QFC
+Pharmacy #0860").
+
+**Evidence:** See the calibration table and full pairwise test results in
+`day3/DAY3_REPORT.md` and `day3/dedup_addresses.py`'s module docstring.
+
+---
+
+## 2026-07-25 — Address dedup: organization_name is not trustworthy evidence for health systems/government orgs
+
+**Decision:** When comparing two records at the same address for the
+dedup collapse rule, `organization_name` equality is only used as
+evidence of "same physical location" when neither record's
+`ownership_category` is `health_system` or `government_or_tribal`. For
+those two categories, only a DBA match counts.
+
+**Why:** Caught concretely while calibrating the dedup logic: "KAISER
+FOUNDATION HEALTH PLAN OF WASHINGTON" is the identical legal
+`organization_name` for a Bellevue infusion pharmacy and an unrelated
+Factoria pharmacy - comparing org_name alone would have merged two
+genuinely different locations. This is the same underlying pattern Day 1
+already flagged for `organization_name` generally (it's the legal
+registrant, not the consumer-facing identity), just showing up again in a
+new context. Health systems and government/tribal orgs routinely run
+several distinct pharmacy departments (inpatient, outpatient, infusion,
+LTC) from one nominal campus address; retail chains don't have this
+failure mode, so the restriction is scoped to just those two categories
+rather than applied everywhere.
+
+**Evidence:** Verified the fix resolves the Kaiser Bellevue/Factoria case
+(now 3 separate locations, was 1 merged) without breaking the legitimate
+Bartell Drugs, QFC, or Haggen collapses, which all link via DBA
+regardless. See `day3/DAY3_REPORT.md`.
+
+---
+
+## 2026-07-25 — Shortage timeline backfill: two tiers, not one, because "resolved" covers almost nothing
+
+**Decision:** Reconstructed historical shortage-slider depth from openFDA's
+current-state drug shortages data using two separate tiers instead of the
+single "resolved records only" approach originally planned:
+- **Tier 1 (resolved, bounded interval)**: only records with
+  `status=="Resolved"`, dated `initial_posting_date` -> `update_date`.
+- **Tier 2 (ongoing, open-ended)**: records still `"Current"` or
+  `"To Be Discontinued"`, dated `initial_posting_date` -> today (pull
+  date), explicitly not a closed interval yet.
+
+**Why:** Checked before assuming the "resolved records" approach would
+work. It doesn't, in practice: openFDA's shortages endpoint has no
+`start_date`/`resolution_date` fields at all (the real fields are
+`initial_posting_date` and `update_date`; `update_date` is only a
+meaningful end-date proxy when `status=="Resolved"`), and only 25 of
+1,614 rows carry that status - which collapse to just **3 distinct
+shortages** once package/NDC-level duplication is removed. A resolved-only
+backfill would have given the slider a real range of only
+2023-03-17 to 2026-02-24, on 3 drugs. Tier 2 isn't what was originally
+asked for (it has no confirmed end date), but it's the only way to get
+real depth out of this data, and 231 of 234 distinct tracked shortages are
+still open, with `initial_posting_date` values as far back as 2012.
+
+**Evidence:** Confirmed empirically, not just from docs: pulled the full
+live dataset (1,614 records) and the official bulk-download manifest
+(`api.fda.gov/download.json`) - the download file has exactly 1,614
+records, identical to the live API, confirming there is no separate
+historical archive to fall back on. Combined tier 1 + tier 2 gives the
+slider a real range of **2012-01-01 to 2026-07-18**; tier 1 alone would
+have given only a ~3-year window on 3 drugs. Both tiers assume a shortage
+was continuously active between its bounding dates (no visibility into
+possible lapses/reopenings in between). Full numbers in
+`day8_prep/build_shortage_backfill.py` output and its module docstring.
+
+---
+
+## 2026-07-25 — Pharmacy growth backfill uses physical_location_id, not raw NPI, and treats pre-2008 dates as unreliable
+
+**Decision:** The pharmacy-existence backfill is keyed on Day 3's
+`physical_location_id` (using the *earliest* `enumeration_date` among all
+NPIs registered at that location), not on each NPI's own
+`enumeration_date` directly. Separately: `enumeration_date` values before
+~2008 are flagged as an unreliable growth signal, not just an early data
+point.
+
+**Why:** Two independent problems would have corrupted a naive per-NPI
+version of this backfill. First, Day 3 already established that the same
+physical store can carry multiple NPIs over time (ownership/banner
+changes - e.g. a Haggen store re-registered under three different
+corporate names). Using each NPI's own `enumeration_date` would make a
+long-standing store look like a "new" pharmacy every time it changed
+ownership. Second, checking the actual month-level distribution of 2006
+`enumeration_date` values (958 of 1,941 records - basically half the
+entire WA dataset) showed 80% of that year's registrations landing in a
+sharp four-month window, May-August 2006. That's not organic pharmacy
+growth; it lines up with NPPES/NPI system rollout and the HIPAA NPI
+compliance deadline, meaning a large share of pharmacies that already
+existed all registered for their first NPI in the same short window. The
+pre-2008 portion of the backfill should be read as "this many pharmacies
+already existed by the time NPI registration became mandatory," not as a
+growth curve.
+
+**Evidence:** 1,941 of 1,941 WA pharmacy NPIs have a usable
+`enumeration_date` (100%, since it's a mandatory NPPES field) - so
+completeness isn't the limiting factor, interpretability is. Collapsing
+to the 1,811 `physical_location_id`s and taking the earliest date per
+location changes the result for 124 locations that have 2+ NPIs. Full
+date range: 2005-05-24 to 2026-06-30 at the location level. As documented
+in `LIMITATIONS.md`, this can only ever show growth (new
+`physical_location_id`s appearing) - NPPES's public API does not expose
+deactivation dates, so it can never show a location disappearing. See
+`day8_prep/pharmacy_enumeration_backfill.csv`.
+
+---
+
+## 2026-07-25 — Forward snapshot jobs scheduled via launchd, not cron
+
+**Decision:** Started the two forward snapshot scripts on a real daily
+schedule now, ahead of Day 8's formal scheduling step, using a macOS
+LaunchAgent (`~/Library/LaunchAgents/com.pharmacytracker.dailysnapshot.plist`,
+6:00 AM daily) rather than a crontab entry.
+
+**Why:** This machine is macOS, where legacy cron's background execution
+is commonly blocked or restricted by the OS permission model unless the
+`cron` daemon is separately granted Full Disk Access - a manual System
+Settings step outside anything a terminal command can do, and easy to
+silently fail without the user noticing. launchd is Apple's native
+scheduler and doesn't have that same silent-failure mode for jobs that
+only touch files in the user's own home directory.
+
+**Caveat this creates**: the LaunchAgent is registered with
+`LimitLoadToSessionType=Aqua`, meaning it only fires while the user is
+logged into a GUI session. If the machine is asleep, powered off, or at
+the login screen at 6:00 AM, that day's snapshot won't run until the next
+time the user logs back in (launchd generally catches up on a missed
+`StartCalendarInterval` job rather than skipping it outright, but this
+isn't a hard guarantee). A gap in the forward-observed snapshot history is
+most likely explained by this, not a script failure - check
+`day8_prep/snapshot_log.txt` first.
+
+**Evidence:** Verified the actual scheduled-invocation path end-to-end,
+not just the underlying scripts in isolation - ran `launchctl start`
+manually to fire the job through launchd (not a direct `python3` call),
+confirmed `LastExitStatus=0` and today's snapshot files were written by
+both scripts via `day8_prep/snapshot_log.txt`. Cannot verify the actual
+6:00 AM unattended fire within this session; that's confirmed by checking
+tomorrow's `day8_prep/snapshots/*/` directories for a new dated file.
+
+---
+
+## 2026-07-25 — Geocoder benchmark/vintage, and treating "Tie" as its own category, not a Match subtype
+
+**Decision:** Geocoded the 1,811 Day 3 physical locations via the Census
+Batch Geocoder's `geographies/addressbatch` endpoint using
+`benchmark=Public_AR_Current`, `vintage=Census2020_Current` - current
+address ranges, but Census-2020-vintage tract boundaries, matching the
+tract geography our ACS 2022 5-year pull already uses. Verified this
+parameter pair against a live 3-row test call before committing the full
+batch, rather than assuming remembered values were still correct.
+Separately: `match_indicator` has three possible values -
+`Match`/`No_Match`/`Tie` - not two. `Tie` (multiple equally-plausible
+candidates, geocoder can't pick one) is its own category with zero
+coordinate data, not a subtype of `Match` alongside `Exact`/`Non_Exact`.
+Caught this by inspecting the real response distribution before writing
+the parser, rather than assuming a two-way Match/No_Match split.
+
+**Why:** Getting the benchmark/vintage pair wrong would have silently
+misaligned every location's tract assignment against the ACS tract
+boundaries used elsewhere in this project. Getting the Tie/Match
+conflation wrong would have either inflated the "matched" count (if Tie
+were miscounted as Non_Exact) or dropped 15 addresses from the unmatched
+export entirely (if Tie weren't recognized as needing manual review at
+all, since a naive parser checking only for `"No_Match"` would silently
+pass Tie rows through as if they had usable data).
+
+**Evidence:** 1,511 Exact + 211 Non_Exact + 15 Tie + 74 No_Match = 1,811
+(reconciles exactly). Overall usable-coordinate match rate: 95.1%. Both
+Tie and No_Match rows are exported together to `geocode_unmatched.csv`
+with a `reason` column distinguishing which failure mode each hit -
+neither is silently dropped. See `day4/parse_geocode_results.py`.
+
+---
+
+## 2026-07-25 — Two separate manual_review_required flags, not merged
+
+**Decision:** The Day 5-facing `day4/physical_locations.csv` table
+carries `dedup_manual_review_required` (from Day 3's address/name
+collapse logic) and `geocode_manual_review_required` (from Day 4's
+geocode match confidence) as two distinct columns, never combined into
+one boolean.
+
+**Why:** They flag different, independent problems - one is an
+ownership/identity ambiguity (are these NPIs really the same store?),
+the other is a geocoding confidence issue (do we trust this location's
+coordinates?). A location can be flagged by either, both, or neither, and
+collapsing them into one field would destroy that distinction for anyone
+querying "why does this location need review."
+
+**Evidence:** 35 of 1,811 locations are flagged by both; 564 by at least
+one. Confirmed before rolling up that Day 3's `manual_review_required` is
+already identical across every NPI sharing a `physical_location_id` (0
+locations found with inconsistent values), so the location-level rollup
+loses no information. See `day4/build_physical_locations.py`.
+
+---
+
+## 2026-07-25 — ACS suppression: checked all known sentinel codes, only one appeared
+
+**Decision:** The suppression audit scans WA's 1,784 ACS tracts against
+the full set of known ACS sentinel codes (-666666666, -222222222,
+-333333333, -444444444, -555555555, -888888888, -999999999), not just
+the one we expected to find, even though only -666666666 actually
+appears in this pull.
+
+**Why:** The other sentinel codes are typically used on margin-of-error
+fields rather than the estimate fields we pulled (median household income
+and total population), so their absence here is expected, not a gap in
+the check. Checking the full set anyway costs nothing and means a future
+re-pull that happens to include MOE fields, or a Census methodology
+change, won't silently slip past this audit.
+
+**Evidence:** 20 of 1,784 tracts (1.1%) have `income_suppressed=True`,
+all via -666666666. 0 tracts have missing population (population is a
+full count, not sample-based, so it's essentially never suppressed the
+same way). Spot-checked the 20 suppressed tracts: the large majority show
+population=0, consistent with non-residential tracts (water, industrial,
+special-purpose tract numbers) rather than a data quality problem.
+Suppressed tracts are never coerced to 0 and are never dropped from the
+table - they stay present with `income_suppressed=True` and
+`excluded_from_income_classification=True`, so population-based analysis
+on those tracts is unaffected. See `day4/acs_suppression_audit.py`.
+
+---
+
+## 2026-07-25 — Day 5 schema: mapped column-name mismatches, fetched a genuinely new dataset for tract geometry
+
+**Decision:** Loaded Day 5's PostgreSQL/PostGIS database from the actual
+files on disk, resolving several column-name mismatches against the
+schema as originally described, and fetching one dataset that didn't
+exist anywhere in the project yet:
+- `physical_locations.normalized_address` <- `matched_address` (geocoder-
+  standardized) when matched, else the raw `address_1`. No column named
+  `normalized_address` exists in `day4/physical_locations.csv`.
+- `geocode_status`/`geocode_quality` <- `match_indicator`/`match_type`.
+  No columns with those exact names exist either.
+- `physical_locations` and `pharmacy_snapshots`/`shortages`' `id` <- used
+  `physical_location_id` (e.g. `LOC-00001`) directly as the primary key
+  for `physical_locations` rather than adding a redundant surrogate,
+  since it's already the natural key referenced everywhere else in the
+  project; added real `BIGSERIAL id` columns for `pharmacies`,
+  `pharmacy_snapshots`, and `shortages` since those were explicitly
+  listed as separate from any natural key.
+- `pharmacies.dba_name` <- `other_names`.
+- `pharmacies.enumeration_date`/`last_updated` <- **not present in
+  `wa_pharmacies_deduped.csv` at all** - joined in from
+  `day8_prep/pharmacy_enumeration_dates.csv` by `npi` instead.
+- `pharmacies.source_name`/`retrieved_at` <- not a column anywhere;
+  populated as known constants (`'NPPES'`, `2026-07-18`) rather than
+  pretending they were derived from a file.
+- `census_tracts.median_income` <- `median_household_income`.
+- `census_tracts.geometry` <- **did not exist anywhere in the project.**
+  Fetched the real 2020 TIGER/Line WA tract shapefile
+  (`tl_2020_53_tract.zip`, 1,784 features, matching our ACS tract count
+  exactly) and loaded it via `ogr2ogr`, reprojecting NAD83 (its native
+  SRID, EPSG:4269) to EPSG:4326 to match the geocoder's output SRID.
+
+**Why:** The task explicitly asked to flag mismatches rather than force
+them, so each of the above got resolved with a clearly-reasoned mapping
+rather than silently renamed or invented. The tract geometry gap was
+different in kind from the naming mismatches - it wasn't a rename, it was
+data that plain didn't exist yet - so it's called out as a real scope
+addition, not folded in silently.
+
+**Evidence:** All 5 tables loaded with row counts matching their source
+files exactly (physical_locations 1,811; pharmacies 1,941; census_tracts
+1,784; pharmacy_snapshots 1,811; shortages 234). Zero FK integrity
+violations. Zero rows failed the `enumeration_date` join. As a strong
+independent check on the whole pipeline (geocoding + shapefile load +
+reprojection all being mutually consistent): ran a live PostGIS
+`ST_Within` spatial join between `physical_locations.geom` and the newly-
+loaded `census_tracts.geometry`, and compared the result against each
+location's `tract_geoid` already supplied by the geocoder. **100%
+agreement across all 1,722 geocoded locations, zero disagreements, zero
+boundary-edge failures.** See `day5_prep/schema.sql` and
+`day5_prep/load_data.py`.
+
+---
+
+## 2026-07-25 — Fixed: chain-pattern list order was mislabeling the banner sub-label; the first fix attempt introduced its own regression, caught before shipping
+
+**Decision:** Fixed `classify_by_name()` in `day3/classify_ownership.py`
+to try three tiers in order: (1) DBA text alone against every SPECIFIC
+pattern, (2) combined dba+org text against every SPECIFIC pattern, (3)
+DBA-then-combined text against a small GENERIC fallback tier
+(`HEALTH_SYSTEM_GENERIC_FALLBACK_PATTERNS`, currently just the broad
+"COMMUNITY HEALTH" catch-all, moved out of `HEALTH_SYSTEM_PATTERNS` into
+its own list). User chose "fix now" over "defer as known limitation" when
+asked.
+
+**Why this happened (original bug):** the original single-pass matcher
+checked `CHAIN_PATTERNS` in list order against combined dba+org text.
+`SAFEWAY`/`ALBERTSON'S` are earlier in the list than `HAGGEN`/`SAV-ON`. A
+record like `organization_name='SAFEWAY INC'` + `dba_name='HAGGEN
+PHARMACY #3498'` (Albertsons registers some Haggen storefronts under a
+Safeway Inc legal entity - a pattern already known from Day 3's dedup
+work) matched SAFEWAY first and never reached HAGGEN.
+
+**First fix attempt regressed something else - caught by rerunning the
+full regression check, not assumed clean:** making DBA always win
+outright (no tiers) fixed the 34 chain records correctly, but
+demoted 2 Yakima Valley Farm Workers Clinic records from their correct,
+specific classification to the generic "Community Health Center
+(specific org not auto-identified)" bucket. Their DBA
+("Unify Community Health...") only carries the generic signal; the
+specific identifying text ("Farm Workers") lives in `organization_name`.
+Neither field is universally more trustworthy than the other - it's
+record-dependent - so a blanket DBA-first rule was the wrong level of
+fix. The three-tier version (generic patterns only as an absolute last
+resort, after BOTH fields have been tried against every specific pattern)
+resolves both cases correctly without a blanket field-priority rule.
+
+**Bonus finding from the same fix, present in the ORIGINAL code too, not
+introduced by any fix attempt:** demoting the generic pattern to tier 3
+also corrected 3 more records that were never part of the original bug
+report - 2 "Community Health Care" Puyallup pharmacies and 1 "New Health
+Programs Association" Colville pharmacy were being caught by the generic
+"COMMUNITY HEALTH" pattern (checked as part of `HEALTH_SYSTEM_PATTERNS`,
+which is checked before `GOVERNMENT_TRIBAL_PATTERNS`) before ever reaching
+the specific `PUYALLUP`/`COLVILLE` patterns in `GOVERNMENT_TRIBAL_PATTERNS`.
+All 3 now correctly show `government_or_tribal` / the specific tribe.
+
+**Evidence:** Full regression check comparing every one of 1,941 rows
+before vs. after, not just the originally-reported cases: 0 changes to
+`physical_location_id`, `manual_review_required`, or any other unrelated
+field (confirms the dedup pipeline is fully insulated from ownership
+classification changes). Exactly 37 `parent_organization` text changes
+(34 chain banner fixes + 3 tribal category fixes), and separately
+confirmed the 2 Yakima Valley records are byte-for-byte identical
+before/after (the near-regression was caught and fixed within this same
+pass, never shipped). Post-reload spot-check via the live database: 46/46
+Haggen records and 26/26 Sav-On records now correctly banded, 0 remaining
+cross-banner mismatches, QFC/Safeway unaffected (0 mismatches, as
+before). `pharmacies` table reloaded (`day5_prep/reload_pharmacies.py`),
+other 4 tables untouched. See `day3/chain_lookup.py` and
+`day3/classify_ownership.py`.
+
+---
+
+## 2026-07-26 — Pharmacy desert income threshold: HUD's 80% AMI standard, applied to a proxy AMI (not HUD's official figure)
+
+**Decision:** A tract is classified `low_income` if its ACS median
+household income is below 80% of its own county's Area Median Income
+(AMI). The 80%-of-AMI cutoff is HUD's standard, well-established "Low
+Income" definition, used across federal housing/community-development
+programs (LIHTC, Section 8, CDBG) - see
+https://www.huduser.gov/portal/datasets/il.html. The county AMI figure
+itself is a **proxy**, not HUD's officially published number: the
+population-weighted mean of `median_household_income` across that
+county's non-suppressed ACS tracts (Day 4's audited pull).
+
+**Why a proxy instead of HUD's real figures:** tried to fetch HUD's bulk
+Income Limits dataset directly - every candidate URL either 404'd or
+returned an empty/placeholder file (HTTP 202 with zero bytes), not real
+data, and HUD's actual bulk-file naming/path couldn't be confirmed
+cleanly within a reasonable time budget this session. Rather than keep
+guessing at brittle URLs, used a proxy that's fully reproducible from
+data already on hand and clearly labeled as such, rather than silently
+presenting a self-computed number as if it were HUD's official figure.
+
+**Why this matters:** HUD's real AMI uses family income (not household
+income) and a different, non-ACS-tract-average methodology, so this
+proxy will diverge from HUD's actual published county AMI by some
+unknown margin. `income_status` should be read as directionally
+informative, not a precise HUD program-eligibility determination. Also
+logged in `LIMITATIONS.md`.
+
+**Evidence:** Computed proxy AMI for all 39 WA counties. Tract-level
+result: 512 low_income, 1,252 not_low_income, 20 suppressed (unchanged
+from Day 4 - never defaulted either way). Block-group level (after
+joining each block group to its parent tract): 1,523 low_income, 3,767
+not_low_income, 21 suppressed. See
+`day6_prep/desert_classification_config.json` and
+`day6_prep/load_block_groups.py`.
+
+---
+
+## 2026-07-26 — Urban/rural classification: 2020 Census Urban Area delineation, not the older 2010 one
+
+**Decision:** A block group is `is_urban=true` if its CenPop
+population-weighted centroid falls within a 2020 Census Urban Area
+polygon (`cb_2020_us_ua20_500k`, the cartographic boundary version of
+that delineation); otherwise rural.
+
+**Why the 2020 vintage specifically:** two Urban Area delineations exist
+for roughly this era - the older 2010-based Urban Area/Urban Cluster
+boundaries, and a newer 2020-based delineation finalized via Federal
+Register notices in March and December 2022. Checked Census's own "Urban
+and Rural" methodology page before choosing: it explicitly confirms the
+2020 delineation is what the Census Bureau itself used to classify 2020
+Census geography as urban vs. rural, so using anything else would be
+inconsistent with the vintage of every other geography in this project
+(2020 tracts, 2020 CenPop block groups).
+
+**Why this determines the distance threshold:** urban block groups use a
+1-mile pharmacy-access threshold, rural use 10 miles - the same 1mi
+urban/10mi rural pattern as the widely-used USDA food-desert definition,
+adapted here for pharmacies rather than groceries.
+
+**Evidence:** 4,244 of 5,311 WA block groups (79.9%) classified urban,
+1,067 (20.1%) rural - a plausible split given WA's population
+concentration in the Puget Sound corridor. See
+`day6_prep/desert_classification_config.json`.
+
+---
+
+## 2026-07-26 — Border handling: 20-mile OR/ID pharmacy buffer, verified to actually change outcomes (not just theoretically present)
+
+**Decision:** Pulled and geocoded pharmacy-taxonomy NPPES records for
+every OR/ID ZIP code whose centroid falls within 20 miles of the WA
+state boundary (99 OR + 33 ID zips, found by buffering the union of all
+WA census tract geometries and filtering the 2023 Census ZCTA
+gazetteer). These border-buffer locations are used ONLY to compute
+nearest-pharmacy distance for WA block groups near the state line -
+never counted as WA population, WA pharmacy inventory, or in any
+WA-facing report.
+
+**Why:** without this, a WA block group a few miles from a real pharmacy
+just across the Columbia River in Oregon (or the Idaho border near
+Spokane) would have its nearest-pharmacy distance measured only against
+other WA locations, artificially inflating the distance and risking a
+false "desert" classification for a place that, in reality, has
+reasonably close pharmacy access.
+
+**Evidence, not just the theoretical case:** applied the same
+`LOCATION.state` verification lesson from the original WA pull (Day 2 -
+never trust the API's own `state`/`postal_code` params alone) to this
+OR/ID pull: 566 raw NPIs, 524 confirmed true OR/ID `LOCATION` addresses,
+42 false positives dropped. Geocoded via the same Census batch geocoder;
+485 matched. **Directly verified the buffer changes real outcomes**, not
+just adds theoretical coverage: computed nearest distance for every WA
+block group twice (WA-only vs. WA+border) and compared. Several Klickitat/
+Benton/Wahkiakum County block groups dropped from a WA-only distance that
+would have exceeded the 10-mile rural threshold (16-19 miles) to a true
+distance under it (2-8 miles) once the real Oregon pharmacy across the
+river is counted - these would have been false desert flags. Just as
+importantly, confirmed the buffer does **not** over-correct: several
+Skamania County block groups remain correctly classified `desert` even
+after the border buffer is applied, because their true nearest pharmacy
+(WA or OR) is still genuinely beyond 10 miles. See
+`day6_prep/pull_border_pharmacies.py` and
+`day6_prep/desert_classification_config.json`.
+
+---
+
+## 2026-07-26 — Distance is straight-line geographic proximity, not travel distance (explicit scope decision)
+
+**Decision:** `nearest_pharmacy_miles` is computed as PostGIS geography
+`ST_Distance` (straight-line/great-circle) between a block group's CenPop
+centroid and the nearest included pharmacy point - not road-network
+travel distance or drive time.
+
+**Why:** explicitly scoped this way per the task description; real
+road-network distance is a documented future improvement, not attempted
+now. Straight-line distance systematically understates real travel
+distance, especially around water bodies (the Columbia River gorge
+border counties above, Puget Sound islands, etc.) and mountainous
+terrain (the Cascades) - both very relevant to WA specifically.
+
+**Evidence / limitation:** logged in `LIMITATIONS.md` rather than left
+implicit - every distance-based field and the `pharmacy_desert_status`
+classification itself should be read as "geographic proximity," not
+confirmed travel access.
+
+---
+
+## 2026-07-26 — Desert result plausibility check against an externally-cited figure (with a citation gap flagged, not papered over)
+
+**Decision:** Computed total population in the 237 `desert`-classified
+block groups (346,334) and compared it against a ~450,000 figure the user
+described as coming from a "UW CHOICE Institute study... cited earlier in
+this project." Searched this project's files and saved memory directly
+for that citation before treating it as established fact - found no
+record of it anywhere (every text match on "CHOICE" or "450" was a false
+positive: the word "choices" in an unrelated sentence, and this project's
+own unrelated count of 450 confirmed Oregon border pharmacies). Proceeded
+with the comparison anyway, using the user-supplied 450,000 as a given
+external reference point rather than something independently verified.
+
+**Why proceed despite the citation gap:** the comparison itself was
+explicitly requested as a rough plausibility check, not a pass/fail test,
+and computing our own number is straightforward and valuable regardless
+of where the comparison figure originated. But the gap is worth surfacing
+plainly rather than silently treating an unverified figure as confirmed
+prior art.
+
+**Result:** 346,334 (77% of 450,000) for the compound low-income-AND-
+low-access definition. For additional context, low-access ALONE
+(dropping the income condition) covers 2,188,152 - about 4.9x the cited
+figure. The cited number sits between our two figures, closer to the
+stricter (compound) one, consistent with a study using some form of
+compound desert definition rather than pure distance - though nothing
+stronger than that can be concluded without knowing their actual
+methodology. Order-of-magnitude plausible; not proof of correctness
+either way.
+
+---
+
+## 2026-07-26 — Border-buffer pharmacies (OR/ID) shown on the Day 7 map, but visually distinct and explicitly labeled reference-only
+
+**Decision:** The 524 OR/ID border-buffer locations will be rendered on
+the Day 7 map using a visually distinct marker style from WA pharmacies
+(e.g. outlined/greyed rather than solid), with an explicit label (tooltip
+or legend text) stating they are reference-only and not part of the WA
+pharmacy dataset.
+
+**Why not backend-only:** a viewer looking at a WA border block group
+correctly classified `not_desert` because of a nearby Oregon pharmacy
+would see no pharmacy on the map at all and have no way to tell the
+classification is right rather than broken. That's a real explainability
+gap for exactly the border cases this project already went out of its
+way to get right (see the Klickitat/Benton/Wahkiakum verification
+above).
+
+**Why not shown identically to WA pharmacies:** these 524 locations only
+went through the taxonomy-based `pharmacy_type` inclusion filter (Day 2's
+`classify()`), NOT the ownership/chain classification or address-dedup
+collapsing that every WA `physical_location` went through (Days 3-5).
+Rendering them with the same marker style would visually imply the same
+data quality and completeness, which isn't true - e.g. two OR/ID NPIs at
+the same physical address would show as two separate markers there,
+something that would have been collapsed to one `physical_location_id`
+had it happened on the WA side.
+
+**How to apply:** any Day 7 map layer, legend, or tooltip logic touching
+`border_buffer_locations` should carry this distinction forward - never
+merge them into the same visual/data category as `physical_locations`.
+
+---
+
+## 2026-07-27 — Day 7 build: block-group polygons didn't exist yet, fetched them; historical view shows current attributes for locations that existed, not historical attributes
+
+**Decision 1 - fetched WA block-group polygon boundaries.**
+`census_block_groups.geom` (CenPop) is a population-weighted POINT, not an
+area - there was no polygon anywhere in the project to render "Washington
+block groups colored by desert status" as an actual choropleth. Fetched
+the 2020 TIGER/Line block-group shapefile (`tl_2020_53_bg.zip`, 5,311
+features - matches the table's row count exactly), joined by `geoid`
+(100% match, 0 unmatched), and serve it simplified
+(`ST_SimplifyPreserveTopology`, ~50m tolerance) - 46MB raw down to 4.3MB,
+measured directly rather than guessed before picking a tolerance.
+
+**Decision 2 - the historical slider shows CURRENT pharmacy attributes for
+locations that existed by the selected date, not historical attributes.**
+`pharmacy_snapshots` only tells us WHEN a location started existing
+(`MIN(snapshot_date)` per `physical_location_id`) - we have no historical
+record of what a location's `ownership_category` or `pharmacy_type` was on
+some past date, only what they are today. So moving the slider back
+changes *which* locations are shown, never *how* a shown location is
+described. This is a real, separate limitation from the growth-only one
+and is surfaced in the API design (`/api/pharmacy/pharmacies?date=X` joins
+existence-by-date to always-current `pharmacies` attributes) - worth
+calling out explicitly if it's not already obvious to a viewer.
+
+**Decision 3 - desert choropleth colors follow the dataviz skill's status
+palette, not its categorical one; ownership uses the categorical palette,
+validated before shipping.** `desert`/`indeterminate`/`not_desert` are
+states of the world (bad/unknown/fine), not identities, so they use the
+skill's reserved status colors (critical red / warning amber / a
+near-invisible neutral fill) rather than a categorical hue - this also
+avoids color collision with the ownership-category point layer on the
+same map. `not_desert` (95% of block groups) is intentionally rendered as
+a barely-there neutral tint rather than a solid "good" green, so the
+minority `desert`/`indeterminate` areas are what actually draws the eye -
+the entire point of the map. Ran `scripts/validate_palette.js` against
+the 4 ownership hues actually used (chain/health_system/government_or_
+tribal/independent_confirmed) before committing to them: all checks pass
+(worst adjacent CVD ΔE 24.2). `unknown` ownership deliberately uses the
+palette's muted ink color instead of a 5th vivid categorical hue - it's
+an absence-of-information bucket, not a peer identity category, so giving
+it equal visual weight to the other four would overstate what's known.
+
+**Evidence this actually works, not just compiles:** tested in-browser,
+not just read the code. Moving the slider to 2012-03-28 dropped the
+pharmacy count from 1,177 (today) to 848, with the mode note correctly
+switching to "Backfilled estimate" language; the one real observed date
+(2026-07-18) correctly shows "Observed snapshot" language; clicking a
+point (verified via direct marker inspection after pixel-coordinate
+clicks proved unreliable at this zoom level) returns the expected name/
+ownership_category/pharmacy_type popup content. Zero console errors
+across the whole test pass. See `webapp/main.py`,
+`webapp/static/js/{date-slider,pharmacy-map}.js`.
+
+---
+
+## 2026-07-27 — Fixed: the pharmacy map was silently dropping all 474 REVIEW-bucket pharmacies, violating the standing carry-forward rule
+
+**Decision:** `/api/pharmacy/pharmacies` now includes locations where
+`included_in_access_analysis = TRUE OR walk_in_access = 'unknown'`
+(previously `included_in_access_analysis = TRUE` only), and every
+returned feature carries a `review_only` flag plus each individual
+pharmacy's own `walk_in_access`, so the frontend can render REVIEW-bucket
+locations visibly flagged rather than either dropping them or blending
+them in as if confirmed.
+
+**Why this was a real bug, not a stylistic gap:** `included_in_access_
+analysis` is `FALSE` for BOTH definitively-excluded pharmacies (long_term_
+care, mail_order, etc.) AND REVIEW-bucket ones (unspecified, institutional,
+unclassified_has_pharmacy_taxonomy) - they're only distinguishable via
+`walk_in_access = 'unknown'`. Filtering on `included_in_access_analysis
+= TRUE` alone conflated the two and silently excluded every REVIEW
+record, directly contradicting the rule established back in Day 2
+("don't delete excluded records - flag them") and reinforced every time
+since (Day 2.5, Day 5's banner-bug verification, etc.).
+
+**Scope of the bug:** 470 of 1,811 physical locations (26%) had *only*
+REVIEW-bucket pharmacies and zero confirmed-included ones - these were
+completely absent from the map, not just under-flagged. Frontend
+treatment: REVIEW-bucket markers keep their ownership-category fill
+color (still real information) but get a dashed warning-amber
+(`#fab219` - the same reserved status color used for `indeterminate_
+income_suppressed` on the choropleth) stroke instead of white, and an
+explicit ⚠ warning line in the popup, both at the per-pharmacy and
+per-location level.
+
+**Evidence:** pharmacy count on the map went from 1,177 to 1,624 after
+the fix. Verified the arithmetic against the database directly rather
+than trusting the UI number alone: 1,177 confirmed-included +
+447 review-only-with-a-successful-geocode = 1,624 exactly (the
+remaining 23 of the 470 review-only locations lack a geocode match,
+consistent with the ~4.9% no-match rate found during Day 4 geocoding).
+Spot-checked a real example via direct marker inspection: a Haggen
+location (`unspecified` pharmacy_type, the exact taxonomy-coding pattern
+flagged in Day 2) now shows both the location-level and pharmacy-level
+warning text, with `parent_organization` still correctly resolving to
+"Albertsons Companies (Haggen banner)" from the Day 5 banner-labeling
+fix. See `webapp/main.py`.
+
+---
+
+## 2026-07-27 — Health system vs. independent-confirmed marker colors: checked, not actually a collision
+
+**Decision:** Kept `#1baf7a` (health_system) and `#008300` (independent_
+confirmed) unchanged after a specific check, rather than changing them on
+an unverified hunch that they looked "identical or near-identical."
+
+**Why:** ran the palette validator on this exact pair in isolation
+(`validate_palette.js "#1baf7a,#008300"`) rather than reasoning about it:
+CVD ΔE 35.9 (protan) / 18.6 (tritan) / 37.6 (normal vision), all
+comfortably clear of the 12 floor - not a colorblind-safety issue.
+Followed up with a direct visual check at two sizes (the legend's actual
+render, and an enlarged side-by-side swatch) rather than trusting the
+abstract number alone, since the concern was specifically about small-
+marker legibility, a different question than CVD confusability: at both
+sizes the two read clearly as teal/mint vs. forest green, not as the same
+color. Both are legitimately in the "green family" in a loose sense, which
+likely prompted the concern, but family resemblance isn't the same as
+indistinguishability.
+
+**Evidence:** independent_confirmed is also extremely rare (15 of 1,941
+WA pharmacies statewide - see Day 3), so the practical collision
+exposure on the live map is low regardless. No code changed for this
+item.
+
+---
+
+## 2026-07-27 — Vulnerability index protocol, defined before any Day 8 code (pre-registered, same discipline as Day 6's config)
+
+**Decision:** The full protocol below, computed per WA block group
+(5,311 rows - the same population unit Day 6 established, chosen again
+here so the shortage layer combines with, rather than duplicates, the
+existing access/income work).
+
+### 1. Chronic-condition therapeutic categories (7, out of 21 distinct tokens in the real data)
+
+Included: **Endocrinology/Metabolism, Cardiovascular, Pulmonary/Allergy,
+Psychiatry, Analgesia/Addiction, Renal, Rheumatology.**
+
+Chosen by matching CDC's own leading-chronic-disease framework (diabetes,
+heart disease, chronic respiratory disease, mental health conditions,
+chronic kidney disease, arthritis/autoimmune disease) to the specific FDA
+`therapeutic_category` tags actually present in `shortages`, not invented
+independently of the data. `Analgesia/Addiction` is included on the
+specific grounds that chronic pain management and opioid-use-disorder
+maintenance therapy are now clinically treated as chronic conditions
+requiring ongoing pharmacy access - concretely evidenced by our own data
+(Naltrexone, an OUD maintenance drug, is one of only 3 tier-1
+resolved shortages in the whole dataset).
+
+**Explicitly excluded, with reasons, not just omitted:**
+- `Anti-Infective` (33) and `Antiviral` (12) - majority acute short-course
+  use (antibiotics, flu/COVID antivirals); the minority chronic exception
+  (HIV/Hepatitis B suppressive therapy) can't be isolated from the acute
+  majority at this data's granularity.
+- `Oncology` (22) - most active cancer treatment is infusion/hospital-
+  administered, not retail-pharmacy walk-in relevant, which is this
+  project's whole frame (`community_retail` is the dominant included
+  `pharmacy_type`).
+- `Pediatric` (19) - an age modifier that cuts across every other
+  category, not a condition category itself.
+- Everything else (`Anesthesia`, `Hematology`, `Ophthalmology`,
+  `Dermatology`, `Gastroenterology`, `Medical Imaging`, `Urology`,
+  `Transplant`, `Total Parenteral Nutrition`, `Reproductive`, `Other`) -
+  each is either small-N in this data or doesn't map to a CDC top-tier
+  chronic condition without real interpretive stretching.
+
+**Real counts, not estimated:** 108 of 234 total shortages (46%) match
+these 7 categories; 105 of those are currently active (`tier=2`) as of
+this writing.
+
+### 2. Formula: 0-100, weighted 40/40/20, not equal
+
+```
+vulnerability_score = access_points + income_points + shortage_points
+
+access_points   = 40 if is_low_access = TRUE, else 0
+income_points   = 40 if income_status = 'low_income'
+                    0 if income_status = 'not_low_income'
+                  undefined if income_status = 'suppressed' -> see §3
+shortage_points = min(20, round(20 * active_chronic_shortage_count / 150))
+```
+
+`active_chronic_shortage_count` = count of `shortages` rows with
+`tier = 2` (currently active - resolved tier-1 shortages don't count
+toward a CURRENT snapshot) whose `therapeutic_category` matches any of
+the 7 categories above. This is a **single national number, identical
+for every WA block group** - shortage data has no sub-state geographic
+granularity, so unlike access/income it cannot vary by block group. All
+of the index's geographic variation comes from the access/income
+components; the shortage component uniformly raises or lowers the whole
+state's floor as national conditions change. Recomputed fresh each time
+the index is (re)built from the latest shortage data, not frozen at
+protocol-definition time - the same block group's score can move over
+time purely from national shortage conditions shifting, even with
+unchanged access/income.
+
+**Not weighted equally (40/40/20), because:** access and income are the
+two already-validated, block-group-precise components of Day 6's desert
+classification - the most direct, individually-verified vulnerability
+signals we have. Shortage exposure is explicitly a *national context*
+signal, not a local-availability measurement - this project's own
+framing, stated as far back as Day 2: "a national drug-shortage context
+layer... not a tool that claims to know local medication availability."
+Weighting it lower is a direct continuation of that established
+distinction, not a new arbitrary call.
+
+**150 (the shortage saturation reference) is an acknowledged judgment
+call, stated as one, not hidden as if externally validated.** Chosen as
+a round number meaningfully above today's real count (105) specifically
+so the index isn't pre-saturated at its ceiling on day one - it needs
+headroom to register things getting worse. Revisit if the active count
+trends persistently toward or past 150.
+
+**Deliberately NOT severity-weighted** (e.g. by `n_package_variants` or
+`source_status`) - a raw count of active matching shortages, to avoid
+stacking a second layer of invented sub-weights on top of the first.
+Noted here as a reasonable future refinement, not done now.
+
+### 3. Scale and suppressed-income handling - flagged, given a partial score, never defaulted
+
+**Complete records** (`income_status` is `low_income` or
+`not_low_income`, 5,290 of 5,311 block groups): `vulnerability_score`
+0-100, `vulnerability_score_basis = 'complete'`, banded into
+`vulnerability_band`:
+- 0-33 -> `low`, 34-66 -> `medium`, 67-100 -> `high`
+(equal-width thirds - the neutral default absent any external banding
+standard, same reasoning as choosing equal-width over an invented
+skew).
+
+**Suppressed-income records** (21 block groups - the exact same 21 Day 6
+already flagged `indeterminate_income_suppressed`, not a new or
+different set): income_points is **undefined, not defaulted to 0 or 40**.
+`vulnerability_score_basis = 'partial_income_suppressed'`,
+`vulnerability_score` computed on a **0-60 scale** (`access_points +
+shortage_points` only) - a different denominator, not a truncated
+version of the 0-100 scale, so it is never directly comparable or
+co-sortable with complete scores without accounting for the missing 40
+points. These records get **no `vulnerability_band`** - assigning
+low/medium/high would itself assert a confidence the data doesn't
+support. Consumers (the Day 8 map, any future ranking) must handle
+`partial_income_suppressed` explicitly, not silently rank or average it
+alongside complete scores. This mirrors Day 6's own handling of the same
+21 block groups and Day 7's fix for REVIEW-bucket pharmacies - carry
+forward with a flag, never drop, never silently coerce.
+
+**Evidence this protocol is grounded in real numbers, not invented in
+the abstract:** every count above (108/234 total, 105 active, 21
+suppressed, 1,458/5,311 low-access) was queried from the live database
+before this entry was written, not assumed. No Day 8 code has been
+written against this protocol yet - this entry exists specifically so
+the formula is fixed and auditable before implementation starts, the
+same discipline Day 6 applied via
+`day6_prep/desert_classification_config.json`.
+
+---
+
+## 2026-07-28 — Day 8 build: shortages shown as a list, never as map points; sequential color for vulnerability, not status colors; a real race-condition bug caught by testing
+
+**Decision 1 - shortages are a browsable list, never plotted as map
+points.** The task's "list/overlay" phrasing was read as a UI panel, not
+shortages-as-markers, because the latter is impossible to do honestly:
+openFDA shortage data has no sub-state location field at all, so placing
+a shortage pin anywhere on the map would assert a geographic precision
+that doesn't exist - directly against this build's framing requirement.
+Only the vulnerability choropleth (built from Day 6's already-geographic
+access/income data) varies by location; the shortage list and the
+national shortage-count-derived score component are identical regardless
+of where on the map you look.
+
+**Decision 2 - vulnerability uses the dataviz skill's sequential blue
+ramp, not the status colors used for desert status on the pharmacy map.**
+Vulnerability low/medium/high is a true ordinal severity scale (a
+continuum discretized into three bands), which the skill's own rule
+("sequential = one hue, light->dark" for magnitude data) calls for -
+different in kind from desert status's three qualitatively different
+situations (bad/unknown/fine), which correctly used the reserved status
+colors on the pharmacy map. Also deliberately avoids reusing red for a
+different meaning than "desert" carries on the other page, since a user
+may have both open.
+
+**Decision 3 - block-group polygon geometry is fetched once and restyled
+in place as the slider moves, not re-fetched per date change.** The
+polygon coordinates (~4MB simplified) don't change with date, only the
+per-geoid score does - so geometry loads once into a keyed layer map
+(`blockGroupLayersByGeoid`), and a separate lightweight
+`/api/shortages/vulnerability-scores?date=X` endpoint (no geometry,
+just geoid + score) drives `layer.setStyle()` calls on every slider
+move. Avoids repeatedly transferring the full polygon payload for what
+is, from the user's perspective, just a color change.
+
+**Bug caught by testing, not shipped:** the initial version fired the
+geometry fetch and the first vulnerability-score fetch in parallel with
+no ordering guarantee. When the score response arrived first (timing-
+dependent - it did on first real load), every `blockGroupLayersByGeoid[geoid]`
+lookup found nothing yet and silently no-opped, leaving the whole
+choropleth on its neutral default style with no error anywhere. Fixed by
+sequencing explicitly (`Promise.all` gating the slider setup and first
+score render on geometry being loaded first). Caught by actually loading
+the page and looking, not by reading the code - the map rendered without
+any console error, so this would not have surfaced without a real
+browser check.
+
+**Evidence the fix (and the formula end-to-end) actually works:**
+verified in-browser, not just re-read the code. Sidebar shortage list:
+231 items rendered (matches `open_ended_count` from `/api/shortages/config`
+exactly), 105 carry the `chronic` badge (matches
+`active_chronic_shortage_count` for today exactly). Clicked into a real
+block group's popup and confirmed the formula arithmetic directly:
+`40 (low_income) + 0 (not low-access) + 14 (today's shortage_points) = 54,
+medium`. Moved the slider to 2015-01-01 and confirmed the SAME block
+group recomputed to `40 + 0 + 0 = 40` (shortage count for that date was 2,
+correctly rounding to 0 points) - access/income held exactly constant,
+only the national shortage component moved, precisely as the protocol
+specifies. Zero console errors across the full test pass. Confirmed the
+Day 7 pharmacy map is unaffected by the shared `map.css` additions. See
+`webapp/main.py`, `webapp/static/js/shortage-map.js`,
+`webapp/static/shortage_map.html`.

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pharmacy Access Map — Washington State</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="/static/css/map.css" />
+</head>
+<body>
+<div class="app">
+  <header class="app__header">
+    <h1 class="app__title">Pharmacy Access Map</h1>
+    <span class="app__subtitle">Washington State — physical access points, not confirmed local availability</span>
+    <nav class="app__nav">
+      <a href="/map/pharmacy" class="active">Pharmacy Access</a>
+      <a href="/map/shortages">Shortage Context</a>
+    </nav>
+  </header>
+
+  <div class="app__body">
+    <div id="map"></div>
+    <aside class="sidebar">
+      <h3>Desert status</h3>
+      <div class="legend-row"><span class="legend-swatch legend-swatch--fill" style="background:#d03b3b"></span><span class="legend-label">Desert (low income + low access)</span></div>
+      <div class="legend-row"><span class="legend-swatch legend-swatch--fill" style="background:#fab219"></span><span class="legend-label">Indeterminate (income data suppressed)</span></div>
+      <div class="legend-row"><span class="legend-swatch legend-swatch--fill" style="background:#e1e0d9"></span><span class="legend-label">Not a desert</span></div>
+
+      <h3>Pharmacy ownership</h3>
+      <div class="legend-row"><span class="legend-swatch" style="background:#2a78d6"></span><span class="legend-label">Chain</span></div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#1baf7a"></span><span class="legend-label">Health system</span></div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#eda100"></span><span class="legend-label">Government / tribal</span></div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#008300"></span><span class="legend-label">Independent (confirmed)</span></div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#898781"></span><span class="legend-label">Unknown ownership</span></div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#898781; border:2px dashed #fab219"></span><span class="legend-label">REVIEW bucket — inclusion not yet confirmed</span></div>
+      <div class="legend-row"><span class="legend-swatch legend-swatch--hollow"></span><span class="legend-label">OR/ID reference pharmacy (not WA data)</span></div>
+
+      <h3>On the map right now</h3>
+      <div class="legend-row"><span class="legend-label"><span id="pharmacy-count">–</span> pharmacy locations shown</span></div>
+    </aside>
+  </div>
+
+  <div class="controls">
+    <div id="slider-root"></div>
+    <div id="mode-note" class="limitation-note"></div>
+    <div class="limitation-note">
+      <strong>This is a growth-only history, not a closures record.</strong>
+      NPPES (the federal registry this is built on) does not publicly expose when a pharmacy
+      deactivates its registration, so a pharmacy that has since closed will still appear
+      present at every date after it first registered. Moving the slider back in time can only
+      add locations, never remove ones that have actually closed.
+    </div>
+    <div class="limitation-note">
+      <strong>Dates before ~2008 reflect a registration deadline, not necessarily real openings.</strong>
+      Roughly half of today's pharmacies show a first-registration date clustered in a few months
+      of 2006, lining up with the federal NPI system's rollout — many of those pharmacies had
+      already existed for years and were simply registering for the first time because it became
+      mandatory, not opening that week.
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/static/js/date-slider.js"></script>
+<script src="/static/js/pharmacy-map.js"></script>
+</body>
+</html>

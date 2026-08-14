@@ -1,0 +1,78 @@
+# --- Secrets / environment ---
+# No .env or credential files exist in this project as of writing (see
+# DECISIONS.md security-audit entry) - these patterns are here so one
+# never gets committed by accident later.
+.env
+.env.*
+*.pem
+*.key
+credentials.json
+secrets.json
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# --- OS cruft ---
+.DS_Store
+
+# --- Local database dumps (none exist yet - future-proofing) ---
+*.sql.gz
+*.dump
+*.db
+*.sqlite
+*.sqlite3
+
+# --- Raw/large public-data pulls ---
+# Regeneratable from the scripts + source URLs already documented in
+# DECISIONS.md; not needed to run the webapp, which reads only from
+# PostgreSQL. Kept out to keep the repo small, not because they're
+# sensitive.
+
+# Census/TIGER shapefiles and their source archives (day5_prep/day6_prep/day7_prep)
+*.shp
+*.shx
+*.dbf
+*.prj
+*.cpg
+*.shp.xml
+*.shp.iso.xml
+*.shp.ea.iso.xml
+tl_2020_*/
+cb_2020_*/
+zcta_gaz/
+*.zip
+
+# Large reference downloads
+day2/zcta_county.txt
+day2/nppes_code_values.pdf
+
+# Raw NPPES/openFDA API dumps and pagination checkpoints
+day2/wa_pharmacies_by_zip_raw.json
+day2/wa_pharmacies_true_location_raw.json
+day2/wa_pharmacies_full_raw.json
+day2/zip_sweep_checkpoint.json
+day6_prep/border_pharmacies_raw.json
+day8_prep/shortages_all_raw.json
+day8_prep/shortages_part1.json
+day8_prep/shortages_part2.json
+day8_prep/resolved_records_raw.json
+
+# Superseded/debug intermediates (kept locally for the record in
+# DECISIONS.md, not worth version-controlling)
+day8_prep/shortage_backfill_snapshots.csv
+day4/geocode_output_raw.csv
+day4/geocode_input.csv
+day4/geocode_test_sample.csv
+day6_prep/border_geocode_input.csv
+day6_prep/border_geocode_output.csv
+day4/geocode_test_output.csv
+
+# Growing daily operational output + logs - not source, not needed to
+# run the app, and unbounded in size over time
+day8_prep/snapshots/
+day8_prep/snapshot_log.txt
+*.log

@@ -1,0 +1,67 @@
+{
+  "_purpose": "Every threshold and data-source assumption behind the Day 6 pharmacy-desert classification, so the classification is auditable without re-reading code. See DECISIONS.md (2026-07-26 entries) for the reasoning behind each choice, and LIMITATIONS.md for what this does NOT capture.",
+  "run_date": "2026-07-26",
+
+  "population_unit": {
+    "source": "Census Bureau CenPop2020 (Centers of Population), block-group level, mean center of population",
+    "url_pattern": "https://www2.census.gov/geo/docs/reference/cenpop2020/blkgrp/CenPop2020_Mean_BG{state_fips}.txt",
+    "why_not_tract_centroid": "A tract's geometric centroid can fall in an unpopulated part of the tract (e.g. a park, industrial zone, or empty rural land). The population-weighted centroid reflects where residents actually live within the tract.",
+    "geography_level": "block group",
+    "wa_block_group_count": 5311
+  },
+
+  "income_threshold": {
+    "definition": "A tract is 'low_income' if its ACS median household income is below 80% of its county's Area Median Income (AMI).",
+    "pct_of_ami": 0.80,
+    "source_of_80pct_rule": "HUD's standard 'Low Income' definition (80% of AMI), used across federal housing/community-development programs (LIHTC, Section 8, CDBG). See https://www.huduser.gov/portal/datasets/il.html",
+    "source_of_ami_figure": "PROXY, not HUD's official published county AMI. HUD's bulk Income Limits dataset could not be reliably fetched this session (candidate URLs returned empty/placeholder responses, not real files). Computed instead as the population-weighted mean of median_household_income across each WA county's non-suppressed ACS tracts.",
+    "proxy_limitation": "This proxy will differ from HUD's official county AMI, which uses a different (non-ACS-tract-average) methodology and a different income concept (family income, not household income). Treat income_status as directionally informative, not a precise HUD eligibility determination.",
+    "suppressed_tract_handling": "Tracts with income_suppressed=true (20 of 1,784, from Day 4's audit) are marked income_status='suppressed', never defaulted to low_income or not_low_income.",
+    "tract_income_status_counts": {"not_low_income": 1252, "low_income": 512, "suppressed": 20},
+    "block_group_income_status_counts": {"not_low_income": 3767, "low_income": 1523, "suppressed": 21}
+  },
+
+  "urban_rural_classification": {
+    "source": "2020 Census Urban Area boundaries (cartographic boundary file, 1:500,000), the delineation Census itself used to classify 2020 Census geography as urban vs. rural",
+    "url": "https://www2.census.gov/geo/tiger/GENZ2020/shp/cb_2020_us_ua20_500k.zip",
+    "vintage_note": "Deliberately NOT the older 2010 Urban Area delineation (also available, tl_2020_us_uac10.zip) - Census's own 'Urban and Rural' methodology page confirms the 2020 delineation (finalized via Federal Register notices, Mar 2022 and Dec 2022) is the correct one for 2020 Census geography.",
+    "method": "A block group is 'urban' if its CenPop population-weighted centroid falls within (ST_Within) any 2020 Urban Area polygon; otherwise 'rural'.",
+    "wa_distribution": {"urban": 4244, "rural": 1067}
+  },
+
+  "distance_thresholds": {
+    "urban_miles": 1,
+    "rural_miles": 10,
+    "precedent": "Matches the widely-used USDA food-desert threshold pattern (1 mile urban / 10 miles rural), adapted here for pharmacy access.",
+    "distance_type": "STRAIGHT-LINE geographic distance (PostGIS geography ST_Distance), NOT road-network travel distance. Labeled explicitly as 'geographic proximity' throughout - see LIMITATIONS.md. Real travel-time/road-network distance is a documented future improvement, not implemented now."
+  },
+
+  "nearest_pharmacy_search": {
+    "eligible_locations": "physical_locations.geom (WA) UNION border_buffer_locations.geom (OR/ID), restricted in both cases to locations with at least one associated pharmacy where included_in_access_analysis=TRUE",
+    "wa_included_points": 1177,
+    "or_included_points": 286,
+    "id_included_points": 48
+  },
+
+  "border_handling": {
+    "buffer_distance_miles": 20,
+    "method": "Unioned all WA census_tracts geometries, buffered by 20 miles (geography-based), then filtered the national Census ZCTA gazetteer (2023) to OR/ID zip codes whose centroid falls within that buffer.",
+    "gazetteer_source": "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2023_Gazetteer/2023_Gaz_zcta_national.zip",
+    "zip_codes_in_buffer": {"OR": 99, "ID": 33},
+    "pharmacy_pull_method": "Same NPPES zip-sweep method as the original WA pull (Day 2), including the same LOCATION.state verification (never trust the API's state/postal_code params alone) - see DECISIONS.md 2026-07-18 WA-state-filtering entry, applied here to OR/ID.",
+    "pharmacies_found": {"raw_unique_npis_before_location_filter": 566, "confirmed_true_OR_location": 450, "confirmed_true_ID_location": 74, "OR_ID_total_after_location_state_filter": 524, "OR_ID_included_after_pharmacy_type_filter": 363, "dropped_false_positives": 42},
+    "critical_rule": "Border-buffer locations are used ONLY to compute nearest-pharmacy distance for WA block groups. They are NEVER counted as WA population, WA pharmacy inventory, or in any WA-facing count/report.",
+    "verified_effect": "Confirmed border buffer changes the outcome for real block groups, not just theoretically: e.g. Census Tract 9502, Klickitat County dropped from a WA-only 16.17mi (would exceed the 10mi rural threshold) to a true 2.37mi once the nearby Oregon pharmacy is counted. Also confirmed it does NOT over-correct: some Skamania County block groups remain correctly classified 'desert' even after the border buffer is applied, since the nearest real pharmacy (WA or OR) is still >10mi away."
+  },
+
+  "final_classification_logic": {
+    "is_low_access": "nearest_pharmacy_miles > distance_threshold_miles (1 if urban, 10 if rural)",
+    "pharmacy_desert_status_values": {
+      "desert": "is_low_access AND income_status == 'low_income'",
+      "not_desert": "NOT is_low_access, OR income_status == 'not_low_income'",
+      "indeterminate_income_suppressed": "income_status == 'suppressed' - regardless of distance, since the income half of the compound definition cannot be confirmed either way"
+    },
+    "compound_definition_precedent": "Mirrors the USDA food-desert model: low-income AND low-access, not either alone.",
+    "wa_block_group_result_counts": {"desert": 237, "not_desert": 5053, "indeterminate_income_suppressed": 21}
+  }
+}

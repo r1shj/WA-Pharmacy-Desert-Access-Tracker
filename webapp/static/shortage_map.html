@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Shortage Context Map — Washington State</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="/static/css/map.css" />
+</head>
+<body>
+<div class="app">
+  <header class="app__header">
+    <h1 class="app__title">Shortage Context Map</h1>
+    <span class="app__subtitle">National shortage context — not observed local shortages</span>
+    <nav class="app__nav">
+      <a href="/map/pharmacy">Pharmacy Access</a>
+      <a href="/map/shortages" class="active">Shortage Context</a>
+    </nav>
+  </header>
+
+  <div class="app__body">
+    <div id="map"></div>
+    <aside class="sidebar">
+      <div class="disclaimer-box">
+        This identifies communities that may have <strong>reduced capacity to
+        adapt</strong> when national shortages occur — it does not measure
+        local pharmacy inventory. No public source of Washington-specific or
+        pharmacy-level shortage data exists (pharmacy inventory is
+        proprietary, not publicly disclosed by any state or federal agency).
+      </div>
+
+      <h3>Community vulnerability</h3>
+      <div class="legend-row"><span class="legend-swatch legend-swatch--fill" style="background:#86b6ef"></span><span class="legend-label">Low</span></div>
+      <div class="legend-row"><span class="legend-swatch legend-swatch--fill" style="background:#2a78d6"></span><span class="legend-label">Medium</span></div>
+      <div class="legend-row"><span class="legend-swatch legend-swatch--fill" style="background:#104281"></span><span class="legend-label">High</span></div>
+      <div class="legend-row"><span class="legend-swatch legend-swatch--fill" style="background:#898781; border:1px dashed #898781"></span><span class="legend-label">Income data suppressed — partial score, no band</span></div>
+
+      <h3>Active shortages (<span id="shortage-count">–</span>)</h3>
+      <div id="shortage-summary" class="shortage-summary"></div>
+      <div id="shortage-list" class="shortage-list"></div>
+    </aside>
+  </div>
+
+  <div class="controls">
+    <div id="slider-root"></div>
+    <div class="limitation-note">
+      <strong>Tier 2 shortages (231 of 234) have open-ended, unconfirmed end dates.</strong>
+      These show as "active since [date]," not a confirmed start-to-finish duration — openFDA has
+      no field that reliably marks when most shortages actually resolve, only when FDA first
+      posted the notice. Only 3 shortages in the entire dataset have a confirmed resolution date.
+      Data does not exist before 2012 in this dataset — the slider is bounded to that range.
+    </div>
+    <div class="limitation-note">
+      <strong>This map does not know what's in stock at any specific pharmacy.</strong>
+      Shortages are reported nationally by the FDA, with no pharmacy-level or Washington-specific
+      location data anywhere in the source. That's why shortages appear only as a list here, never
+      as points on the map — plotting them geographically would imply a precision this data
+      cannot support.
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/static/js/date-slider.js"></script>
+<script src="/static/js/shortage-map.js"></script>
+</body>
+</html>
