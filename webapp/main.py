@@ -323,7 +323,7 @@ def shortages_config():
     conn.close()
     return {
         "slider_min_date": r["min_date"].isoformat(),
-        "slider_max_date": datetime.date.today().isoformat(),
+        "slider_max_date": _today().isoformat(),
         "daily_observation_since": DAILY_SHORTAGE_OBSERVATION_START,
         "total_count": r["total"],
         "open_ended_count": r["open_ended"],
@@ -346,7 +346,7 @@ def shortages_active(date: str = Query(default=None, description="YYYY-MM-DD; de
     shortage component, computed separately. `counts_toward_vulnerability`
     tells the frontend which rows do, for transparency.
     """
-    query_date = date or datetime.date.today().isoformat()
+    query_date = date or _today().isoformat()
     conn = db()
     cur = conn.cursor()
     cur.execute("""
@@ -416,7 +416,7 @@ def vulnerability_scores(date: str = Query(default=None, description="YYYY-MM-DD
     Suppressed-income block groups get a partial 0-60 score
     (access+shortage only) and no band - never defaulted to a number.
     """
-    query_date = date or datetime.date.today().isoformat()
+    query_date = date or _today().isoformat()
     conn = db()
     cur = conn.cursor()
 
