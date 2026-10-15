@@ -102,9 +102,16 @@ function updateShortageList(date) {
         const badge = s.counts_toward_vulnerability
           ? '<span class="chronic-badge" title="Counts toward the vulnerability index\'s shortage component">chronic</span>'
           : '';
-        const duration = s.end_date
-          ? `resolved ${s.end_date}`
-          : `active since ${s.start_date} (open-ended)`;
+        // An end date means two different things - never call a feed
+        // dropout "resolved" (see DECISIONS.md 2026-10-15).
+        let duration;
+        if (s.end_date_basis === 'confirmed_resolved') {
+          duration = `resolved ${s.end_date}`;
+        } else if (s.end_date_basis === 'last_observed_in_feed') {
+          duration = `last listed by FDA ${s.end_date} (left the feed - not confirmed resolved)`;
+        } else {
+          duration = `active since ${s.start_date} (open-ended)`;
+        }
         item.innerHTML = `
           <div class="shortage-item__name">${s.generic_name}${badge}</div>
           <div class="shortage-item__meta">${s.therapeutic_category || 'Uncategorized'}</div>
@@ -123,6 +130,16 @@ Promise.all([
   loadBlockGroupGeometry(),
   fetch('/api/shortages/config').then(r => r.json()),
 ]).then(([_, cfg]) => {
+  document.getElementById('interval-note').innerHTML = `
+    <strong>${cfg.open_ended_count} of ${cfg.total_count} shortages have open-ended, unconfirmed end dates.</strong>
+    These show as "active since [date]," not a confirmed start-to-finish duration — openFDA has no
+    field marking when most shortages end, only when FDA first posted the notice.
+    ${cfg.confirmed_resolved_count} have a confirmed resolution date. Since daily observation began
+    (${cfg.daily_observation_since}), ${cfg.dropped_from_feed_count} more have left FDA's feed without
+    ever being marked resolved — nearly all were discontinuation notices leaving the list about a year
+    after posting, so they're shown as "last listed," never as resolved.
+    Data does not exist before 2012 in this dataset — the slider is bounded to that range.
+  `;
   new DateSlider({
     container: document.getElementById('slider-root'),
     minDate: cfg.slider_min_date,

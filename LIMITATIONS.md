@@ -138,69 +138,96 @@ bulk-download files directly and confirmed they contain the exact same
 1,614 records as the live API, refreshed daily — it's the same snapshot
 in a different format, not a separate historical archive.
 
-**Why not:** to give the timeline slider any depth before today, we
-reconstructed history from what current records happen to carry. Only 3
-distinct shortages in the entire dataset have both a confirmed start and
-a confirmed end date (drugs marked "Resolved," with fewer than two dozen
-total). Everything else that has historical depth — 231 other shortages —
-is still ongoing, so we can only say "known active since its posting
-date," not "active for exactly this duration."
+**Why not:** the timeline has two very different halves. **Before
+2026-07-18** it is reconstructed from what a single pull of current
+records happened to carry: a posting date, and an end date only for
+shortages already marked "Resolved." **From 2026-07-18 on** the feed has
+been captured daily, so a shortage leaving the feed or changing status is
+seen within a day (except on 4 days in Aug-Oct 2026 when the collecting
+machine was off).
 
-**What this means concretely:** the slider's shortage range reaches back
-to 2012, but **most of that depth is the open-ended tier, not a confirmed
-start-to-finish period.** For the 3 resolved drugs, the active window
-shown is real and bounded. For the other 231, the start date is real but
-the "still active" status just reflects "as of our last data pull" — if
-one of those shortages actually ended at some point without openFDA's
-current snapshot reflecting it (or a shortage was resolved and later
-dropped from the dataset entirely before we ever captured it), that
-window would be wrong and we'd have no way to know.
+**What this means concretely:** the slider reaches back to 2012, but
+**most of that depth is the open-ended tier, not a confirmed
+start-to-finish period** — a shortage posted in 2015 and still listed is
+shown as active the whole time, though it may have lapsed and returned in
+between. An end date means one of two things, and the map never mixes
+them up:
+- **Confirmed resolved** — FDA marked it Resolved.
+- **Last listed by FDA** — it left openFDA's feed without being marked
+  Resolved. That is not confirmation the shortage ended. In the first
+  three months of daily observation, every one of these (35) was a
+  "To Be Discontinued" notice that left the feed about a year after
+  posting — the product was discontinued, which is the opposite of
+  resolved. Once FDA stops listing such a product, it also stops counting
+  toward the vulnerability score's shortage exposure, even though the
+  product remains unavailable from that manufacturer.
 
-**What would actually close this gap:** running the forward daily
-snapshot job continuously from today onward. Every day that passes adds
-one day of genuinely observed data instead of reconstructed data, so this
-gap only ever shrinks relative to the total slider range, never grows.
+Shortages that were resolved and dropped from openFDA before 2026-07-18
+are gone from the record entirely; nothing here can recover them.
+
+**What would actually close this gap:** for the past, nothing available —
+openFDA keeps no history. Going forward, the daily job (now on GitHub
+Actions, so it no longer depends on any one machine being on) keeps
+adding observed days, so the reconstructed share of the timeline shrinks
+every day and never grows.
 
 ---
 
-## The pharmacy timeline can only show growth, never closures
+## The pharmacy timeline before 2026-10-15 can only show growth, and closures after it show up only if the registry records them
 
-**What this tool actually checks:** the pharmacy layer's historical view
-is built from each NPI's `enumeration_date` — when it was first
-registered with the federal government. A pharmacy location "counts" as
-existing as of a given past date if it was already registered by then.
+The pharmacy slider has two halves with different weaknesses.
 
-**Why not:** NPPES's public API does not expose deactivation dates (see
-the earlier "we have not validated against WA licensing records" entry —
-this is the same underlying gap showing up again). We can see when a
-pharmacy first appears in the federal registry. We cannot see when one
-closes. That means this backfill is structurally one-directional: it can
-only add locations as you move forward in time, never remove them.
+**Before the first observed snapshot (2026-07-18): reconstructed from
+registration dates.** Each NPI's `enumeration_date` is when it was first
+registered with the federal government; a location counts as existing on
+a past date if it was registered by then. NPPES's public API exposes no
+deactivation dates (the same gap as the WA licensing entry above), so
+this half can only add locations as time moves forward, never remove
+them. It is biased in **two opposite directions at once**, so past counts
+are neither a floor nor a ceiling:
 
-**What this means concretely:** **historical pharmacy counts from this
-tool will always be a floor, not an accurate count** — every past date
-will show at least as many pharmacies as actually existed, and any
-pharmacy that closed before today will still appear as "present" on every
-date up through today. On top of that directional bias, the earliest
-part of the timeline has a separate, specific problem: **49% of WA
-pharmacy records show a 2006 enumeration date, and 80% of those cluster
-in a single four-month window (May–August 2006).** That lines up with the
-federal NPI system's mandatory-registration rollout, not with when those
-pharmacies actually opened. A pharmacy that had already been open for
-twenty years by 2006 shows up in this data exactly the same way as one
-that opened that same week. **Treat any date before roughly 2008 as "this
-many pharmacies already existed by the registration deadline," not as a
-real growth trend** — the actual growth signal only becomes meaningful
-after the registration rollout settled down.
+- **Overcount:** a pharmacy that closed but never deactivated its NPI
+  appears present on every date after it registered.
+- **Undercount:** the API only serves *active* NPIs, so a pharmacy that
+  closed *and* deactivated before the July 2026 pull isn't in the dataset
+  at all - it's missing from every past date it actually existed on.
 
-**What would actually close this gap:** there is no available fix for the
-closure-blindness from NPPES data alone — it would require the same kind
-of state-level licensing cross-check described in the WA DOH limitation
-above, applied historically rather than just to current records. The
-forward daily snapshot job (shared with the shortage layer) at least
-ensures that from today onward, real openings *and* closures the dataset
-happens to reflect are captured with accurate dates, rather than compounding
-the growth-only bias indefinitely.
+(An earlier version of this entry called past counts "a floor"; that
+ignored the undercount and was wrong.)
+
+The earliest years have a separate problem: **49% of WA pharmacy records
+show a 2006 enumeration date, and 80% of those cluster in a single
+four-month window (May–August 2006)**, matching the NPI system's
+mandatory-registration rollout rather than real openings. **Treat any
+date before roughly 2008 as "this many pharmacies already existed by the
+registration deadline," not as a growth trend.**
+
+**From 2026-10-15: observed daily, but only as well as NPPES records
+closures.** A GitHub Actions job re-sweeps the full registry every day
+(`jobs/pharmacy_sync.py`) and a location drops off the map once none of
+its NPIs are active. Between 2026-07-18 and 2026-10-15 there are no
+observations at all (the earlier local job saved copies of a static file
+and observed nothing - DECISIONS.md 2026-10-15), so those dates show the
+2026-07-18 state, labelled as such. Remaining gaps:
+
+- **Closures lag or never appear.** Pharmacies often don't deactivate
+  promptly when they close. The first real sweep found **zero**
+  deactivations among the 1,941 known NPIs after three months, while
+  finding 11 new registrations and 154 updated records - so the sweep is
+  live; the registry is simply slow to record closures.
+- **New pharmacies don't appear on the map automatically.** New NPIs go
+  to `npi_review_queue` (11 on the first run) because they need type and
+  ownership classification, address dedup and geocoding first. Until
+  someone works the queue, the map undercounts openings since July 2026.
+- **A relocated NPI is dropped from its old location and not added at
+  its new one** (it's listed in that day's `snapshot_runs` details).
+- **A failed or aborted day has no snapshot**; the map shows the most
+  recent earlier one and says so.
+
+**What would actually close this gap:** for closures, the same state
+licensing cross-check described in the WA DOH entry. For openings,
+working the review queue through the Day 2-4 classification and
+geocoding steps.
 
 ---
 
@@ -291,3 +318,29 @@ option is across that border is not accounted for here.
 **What would actually close this gap:** widening the buffer if a specific
 uncovered case is found, or adding a similar buffer against the Canadian
 border for northern WA counties.
+
+---
+
+## The daily data depends on two free-tier services that can quietly stop
+
+**What can stop it:**
+
+- **GitHub disables scheduled workflows in a public repository after 60
+  days with no repository activity.** The daily job doesn't commit
+  anything, so it doesn't count as activity. Two months without a push
+  means the snapshots silently stop (GitHub emails the owner when it
+  disables the schedule).
+- **Supabase's free tier pauses a project after a week of inactivity.**
+  The daily job's writes count as activity, so the two keep each other
+  alive. But once the GitHub schedule is disabled, the database pauses a
+  week later and the live site's maps stop loading until it's resumed in
+  the Supabase dashboard.
+
+A failed run (an API outage, or a safeguard refusing suspicious data)
+writes no snapshot for that day and turns the workflow run red. Every run,
+successful or not, is logged in `snapshot_runs`. Missed days can't be
+recovered later - neither openFDA nor NPPES serves past states.
+
+**What would close this gap:** any push to the repository resets
+GitHub's 60-day clock, and re-enabling the workflow in the Actions tab
+restores it. A paid Supabase tier doesn't pause.

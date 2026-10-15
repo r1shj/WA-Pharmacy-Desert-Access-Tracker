@@ -6,26 +6,43 @@ Day 8 adds routes here rather than starting a second backend.
 import datetime
 import json
 import os
+import sys
+from zoneinfo import ZoneInfo
 
-import psycopg2
-import psycopg2.extras
 from fastapi import FastAPI, Query
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.dirname(APP_DIR))
+from jobs.db import connect  # noqa: E402 - DATABASE_URL on Render, local DB otherwise
+
+class RevalidatingStaticFiles(StaticFiles):
+    """No build step fingerprints the JS/CSS filenames, so tell browsers to
+    revalidate every time (a cheap ETag 304) - otherwise returning visitors
+    keep running the previous deploy's scripts against the new API."""
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
 
 app = FastAPI(title="Pharmacy Access & Shortage Tracker")
-app.mount("/static", StaticFiles(directory=os.path.join(APP_DIR, "static")), name="static")
+app.mount("/static", RevalidatingStaticFiles(directory=os.path.join(APP_DIR, "static")), name="static")
 
 
 def db():
-    return psycopg2.connect(dbname="pharmacy_tracker", cursor_factory=psycopg2.extras.RealDictCursor)
+    return connect(dict_cursor=True)
 
 
 # ---------------------------------------------------------------------------
 # Pages
 # ---------------------------------------------------------------------------
+
+@app.get("/")
+def landing_page():
+    return FileResponse(os.path.join(APP_DIR, "static", "landing.html"))
+
 
 @app.get("/map/pharmacy")
 def map_pharmacy_page():
@@ -41,11 +58,16 @@ def map_shortages_page():
 # API - pharmacy map (Day 7)
 # ---------------------------------------------------------------------------
 
+def _today():
+    # Pacific, matching jobs/daily_snapshot.py - Render's clock is UTC.
+    return datetime.datetime.now(ZoneInfo("America/Los_Angeles")).date()
+
+
 @app.get("/api/pharmacy/config")
 def pharmacy_config():
     """Slider bounds + the backfill/observed transition point, computed
-    from the real data rather than hardcoded, so this stays correct once
-    Day 8 starts loading more observed dates."""
+    from the real data rather than hardcoded, so this stays correct as
+    the daily NPPES sweep adds observed dates."""
     conn = db()
     cur = conn.cursor()
     cur.execute("""
@@ -53,16 +75,21 @@ def pharmacy_config():
         FROM pharmacy_snapshots GROUP BY snapshot_source
     """)
     rows = {r["snapshot_source"]: r for r in cur.fetchall()}
+    cur.execute("""
+        SELECT DISTINCT snapshot_date FROM pharmacy_snapshots
+        WHERE snapshot_source = 'observed' ORDER BY snapshot_date
+    """)
+    observed_dates = [r["snapshot_date"].isoformat() for r in cur.fetchall()]
     cur.close()
     conn.close()
 
     backfill = rows.get("backfilled_enumeration")
-    observed = rows.get("observed")
     return {
         "slider_min_date": backfill["min_date"].isoformat() if backfill else None,
-        "slider_max_date": datetime.date.today().isoformat(),
+        "slider_max_date": _today().isoformat(),
         "last_backfilled_date": backfill["max_date"].isoformat() if backfill else None,
-        "observed_dates_available": [observed["min_date"].isoformat()] if observed else [],
+        "first_observed_date": observed_dates[0] if observed_dates else None,
+        "observed_dates_available": observed_dates,
     }
 
 
@@ -118,17 +145,46 @@ def pharmacies_geojson(date: str = Query(default=None, description="YYYY-MM-DD; 
     are always CURRENT values - we don't have historical attribute
     snapshots, only historical existence. That's a real, separate
     limitation surfaced in the UI, not just here.
+
+    Which pharmacies "existed" on a date:
+      - on/after the first observed snapshot: the NPIs active in the most
+        recent observed snapshot on or before that date (so deactivations
+        found by the daily NPPES sweep actually disappear)
+      - before it: the enumeration-date backfill, which can only add
+    `basis` / `observed_date` in the response say which one was used.
     """
-    query_date = date or datetime.date.today().isoformat()
+    query_date = date or _today().isoformat()
 
     conn = db()
     cur = conn.cursor()
     cur.execute("""
-        WITH existed AS (
-            SELECT physical_location_id, MIN(snapshot_date) AS first_date
-            FROM pharmacy_snapshots
-            GROUP BY physical_location_id
-        ),
+        SELECT max(snapshot_date) AS d FROM pharmacy_snapshots
+        WHERE snapshot_source = 'observed' AND snapshot_date <= %s
+    """, (query_date,))
+    observed_date = cur.fetchone()["d"]
+    if observed_date:
+        active_cte = """
+            active AS (
+                SELECT p.* FROM pharmacies p
+                JOIN pharmacy_snapshots s ON s.physical_location_id = p.physical_location_id
+                WHERE s.snapshot_source = 'observed' AND s.snapshot_date = %s
+                  AND p.npi = ANY(string_to_array(s.contributing_npis, ';'))
+            )"""
+        param = observed_date
+    else:
+        active_cte = """
+            existed AS (
+                SELECT physical_location_id, MIN(snapshot_date) AS first_date
+                FROM pharmacy_snapshots
+                GROUP BY physical_location_id
+            ),
+            active AS (
+                SELECT p.* FROM pharmacies p
+                JOIN existed e ON e.physical_location_id = p.physical_location_id
+                WHERE e.first_date <= %s
+            )"""
+        param = query_date
+    cur.execute("WITH " + active_cte + """,
         loc_pharmacies AS (
             SELECT physical_location_id,
                    json_agg(json_build_object(
@@ -146,7 +202,7 @@ def pharmacies_geojson(date: str = Query(default=None, description="YYYY-MM-DD; 
                        (array_agg(ownership_category ORDER BY npi))[1]
                    ) AS primary_ownership_category,
                    NOT bool_or(included_in_access_analysis) AS review_only
-            FROM pharmacies
+            FROM active
             WHERE included_in_access_analysis = TRUE OR walk_in_access = 'unknown'
             GROUP BY physical_location_id
         )
@@ -154,10 +210,9 @@ def pharmacies_geojson(date: str = Query(default=None, description="YYYY-MM-DD; 
                ST_X(l.geom) AS lon, ST_Y(l.geom) AS lat,
                lp.pharmacies, lp.primary_ownership_category, lp.review_only
         FROM physical_locations l
-        JOIN existed e ON e.physical_location_id = l.physical_location_id
         JOIN loc_pharmacies lp ON lp.physical_location_id = l.physical_location_id
-        WHERE e.first_date <= %s AND l.geom IS NOT NULL
-    """, (query_date,))
+        WHERE l.geom IS NOT NULL
+    """, (param,))
     rows = cur.fetchall()
     cur.close()
     conn.close()
@@ -174,7 +229,11 @@ def pharmacies_geojson(date: str = Query(default=None, description="YYYY-MM-DD; 
             "review_only": r["review_only"],
         },
     } for r in rows]
-    return JSONResponse({"type": "FeatureCollection", "features": features, "as_of_date": query_date})
+    return JSONResponse({
+        "type": "FeatureCollection", "features": features, "as_of_date": query_date,
+        "basis": "observed" if observed_date else "backfilled_enumeration",
+        "observed_date": observed_date.isoformat() if observed_date else None,
+    })
 
 
 @app.get("/api/pharmacy/border-pharmacies")
@@ -227,6 +286,10 @@ CHRONIC_CATEGORIES_REGEX = (
     r"Psychiatry|Analgesia/Addiction|Renal|Rheumatology)"
 )
 SHORTAGE_SATURATION_REFERENCE = 150  # see DECISIONS.md for why 150, not tuned to today's count
+# First day the shortage feed was snapshotted daily. A fixed historical
+# fact - not derivable from last_observed_date, which records each row's
+# most recent sighting.
+DAILY_SHORTAGE_OBSERVATION_START = "2026-07-18"
 VULNERABILITY_DISCLAIMER = (
     "This identifies communities that may have reduced capacity to adapt "
     "when national shortages occur - it does not measure local pharmacy "
@@ -247,19 +310,25 @@ def _active_chronic_shortage_count(cur, query_date):
 def shortages_config():
     conn = db()
     cur = conn.cursor()
-    cur.execute("SELECT min(start_date) AS min_date FROM shortages")
-    min_date = cur.fetchone()["min_date"]
-    cur.execute("SELECT count(*) AS n FROM shortages WHERE end_date IS NULL")
-    open_ended = cur.fetchone()["n"]
-    cur.execute("SELECT count(*) AS n FROM shortages")
-    total = cur.fetchone()["n"]
+    cur.execute("""
+        SELECT min(start_date) AS min_date,
+               count(*) AS total,
+               count(*) FILTER (WHERE end_date_basis IS NULL) AS open_ended,
+               count(*) FILTER (WHERE end_date_basis = 'confirmed_resolved') AS confirmed_resolved,
+               count(*) FILTER (WHERE end_date_basis = 'last_observed_in_feed') AS dropped_from_feed
+        FROM shortages
+    """)
+    r = cur.fetchone()
     cur.close()
     conn.close()
     return {
-        "slider_min_date": min_date.isoformat(),
+        "slider_min_date": r["min_date"].isoformat(),
         "slider_max_date": datetime.date.today().isoformat(),
-        "open_ended_count": open_ended,
-        "total_count": total,
+        "daily_observation_since": DAILY_SHORTAGE_OBSERVATION_START,
+        "total_count": r["total"],
+        "open_ended_count": r["open_ended"],
+        "confirmed_resolved_count": r["confirmed_resolved"],
+        "dropped_from_feed_count": r["dropped_from_feed"],
     }
 
 
@@ -268,10 +337,11 @@ def shortages_active(date: str = Query(default=None, description="YYYY-MM-DD; de
     """
     Shortages active on the given date: start_date <= date <=
     (end_date or unbounded). Tier is irrelevant to this boundary check -
-    a tier-1 (resolved) shortage is simply one whose end_date happens to
-    be populated and in the past relative to `date`; a tier-2 shortage
-    has no end_date, so it counts as active for every date from its
-    start through today. This list is NOT filtered to the chronic
+    an end_date comes either from a confirmed resolution (tier 1) or from
+    the last day the shortage was seen in openFDA's feed (tier 3,
+    end_date_basis='last_observed_in_feed' - not a resolution); a tier-2
+    shortage has no end_date, so it counts as active for every date from
+    its start through today. This list is NOT filtered to the chronic
     categories - that filter only applies to the vulnerability score's
     shortage component, computed separately. `counts_toward_vulnerability`
     tells the frontend which rows do, for transparency.
@@ -280,7 +350,7 @@ def shortages_active(date: str = Query(default=None, description="YYYY-MM-DD; de
     conn = db()
     cur = conn.cursor()
     cur.execute("""
-        SELECT id, generic_name, tier, source_status, start_date, end_date,
+        SELECT id, generic_name, tier, source_status, start_date, end_date, end_date_basis,
                n_package_variants, dosage_form, therapeutic_category,
                (therapeutic_category ~ %s) AS counts_toward_vulnerability
         FROM shortages
@@ -298,6 +368,7 @@ def shortages_active(date: str = Query(default=None, description="YYYY-MM-DD; de
         "source_status": r["source_status"],
         "start_date": r["start_date"].isoformat(),
         "end_date": r["end_date"].isoformat() if r["end_date"] else None,
+        "end_date_basis": r["end_date_basis"],
         "n_package_variants": r["n_package_variants"],
         "dosage_form": r["dosage_form"],
         "therapeutic_category": r["therapeutic_category"],

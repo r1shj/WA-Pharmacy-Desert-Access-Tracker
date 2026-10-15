@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Washington Pharmacy Access &amp; Shortage Tracker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Maps pharmacy access and pharmacy deserts across Washington State, with national drug-shortage context.">
+<link rel="stylesheet" href="/static/css/map.css" />
+<link rel="stylesheet" href="/static/css/landing.css" />
+</head>
+<body class="landing">
+<main class="landing__main">
+
+  <header class="landing__hero">
+    <p class="landing__eyebrow">Washington State</p>
+    <h1>Pharmacy Access &amp; Shortage Tracker</h1>
+    <p class="landing__lede">
+      Where do Washingtonians live relative to a pharmacy, which communities are
+      pharmacy deserts, and which of them may have the least room to adapt when
+      national drug shortages hit?
+    </p>
+    <div class="landing__entries">
+      <a class="entry" href="/map/pharmacy">
+        <span class="entry__title">Pharmacy Access Map</span>
+        <span class="entry__desc">Every pharmacy location in the state, and which neighborhoods are pharmacy deserts.</span>
+      </a>
+      <a class="entry" href="/map/shortages">
+        <span class="entry__title">Shortage Context Map</span>
+        <span class="entry__desc">FDA's national drug-shortage list, and a community vulnerability index.</span>
+      </a>
+    </div>
+  </header>
+
+  <section class="landing__section">
+    <h2>How it works</h2>
+    <div class="steps">
+      <div class="step">
+        <h3>Pharmacies</h3>
+        <p>
+          Pharmacy registrations come from the federal NPPES provider registry, filtered to
+          locations physically in Washington, classified by type (walk-in retail, clinic,
+          mail-order, and so on) and by ownership (chain, health system, independent), then
+          geocoded with the U.S. Census Bureau geocoder. Several registrations at the same
+          storefront are merged into one physical location.
+        </p>
+      </div>
+      <div class="step">
+        <h3>Pharmacy deserts</h3>
+        <p>
+          Each of Washington's census block groups is measured from where its residents
+          actually live (its population-weighted center) to the nearest walk-in pharmacy,
+          including pharmacies just across the Oregon and Idaho borders. A block group is a
+          desert when it is both low-income and farther than 1 mile (urban) or 10 miles
+          (rural) from a pharmacy.
+        </p>
+      </div>
+      <div class="step">
+        <h3>Shortage context</h3>
+        <p>
+          The FDA's national drug-shortage list is checked every day. A vulnerability index
+          combines each block group's pharmacy access, income, and current national shortages
+          in chronic-condition drug categories, to show which communities may have the least
+          capacity to adapt when shortages occur.
+        </p>
+      </div>
+      <div class="step">
+        <h3>Two timelines</h3>
+        <p>
+          Each map has its own date slider. On the <a href="/map/pharmacy">pharmacy map</a>,
+          it shows which pharmacies had registered by a given date, back to 2005, and from
+          October 2026 on, which were still active in the daily registry sweep. On the
+          <a href="/map/shortages">shortage map</a>, it shows which national shortages FDA
+          listed on a given date, back to 2012, and recomputes the vulnerability index for
+          that day.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="landing__section landing__limits">
+    <h2>What this can't tell you</h2>
+    <ul>
+      <li><strong>It doesn't know what's in stock.</strong> Shortages are reported nationally;
+        no public source covers what any specific pharmacy has on its shelves. Check with your
+        local pharmacy for availability.</li>
+      <li><strong>A registered pharmacy isn't confirmed open.</strong> The federal registry
+        doesn't reliably record closures.</li>
+      <li><strong>Distances are straight-line,</strong> not driving distance — real trips across
+        water or mountains are longer.</li>
+      <li><strong>The low-income threshold is an approximation</strong> of HUD's 80%-of-area-median
+        standard, computed from Census data rather than HUD's own published figures.</li>
+    </ul>
+    <p>Every known gap is documented in
+      <a href="https://github.com/r1shj/WA-Pharmacy-Desert-Access-Tracker/blob/main/LIMITATIONS.md">LIMITATIONS.md</a>,
+      and every methodological choice in
+      <a href="https://github.com/r1shj/WA-Pharmacy-Desert-Access-Tracker/blob/main/DECISIONS.md">DECISIONS.md</a>.</p>
+  </section>
+
+  <footer class="landing__footer">
+    <p>
+      Data: <a href="https://npiregistry.cms.hhs.gov/">CMS NPPES</a> ·
+      U.S. Census Bureau (<a href="https://www.census.gov/programs-surveys/acs">ACS</a>,
+      TIGER/Line, Centers of Population, Geocoder) ·
+      <a href="https://open.fda.gov/apis/drug/drugshortages/">openFDA Drug Shortages</a> ·
+      Map tiles © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors
+    </p>
+    <p>
+      <a href="https://github.com/r1shj/WA-Pharmacy-Desert-Access-Tracker">Source on GitHub</a> ·
+      Not medical advice.
+    </p>
+  </footer>
+
+</main>
+</body>
+</html>

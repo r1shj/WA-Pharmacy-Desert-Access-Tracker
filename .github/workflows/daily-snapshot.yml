@@ -1,0 +1,61 @@
+name: Daily snapshot
+
+# Re-pulls the openFDA shortage feed and re-sweeps the NPPES registry for WA
+# pharmacies, writing both into Supabase. See jobs/daily_snapshot.py.
+
+on:
+  schedule:
+    # 14:17 UTC = 7:17 Pacific (PDT) / 6:17 (PST). Off the top of the hour,
+    # when GitHub's scheduler is busiest and most likely to delay runs.
+    - cron: "17 14 * * *"
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Run a single job"
+        type: choice
+        options: [both, shortages, pharmacies]
+        default: both
+      allow_large_drop:
+        description: "Accept a pharmacy location drop above the 3% safeguard (only after reviewing the aborted run)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # Supabase session pooler. Only the password is secret; it comes from
+      # the SUPABASE_DB_PASSWORD repository secret and is never written here.
+      PGHOST: aws-0-us-east-2.pooler.supabase.com
+      PGPORT: "5432"
+      PGUSER: postgres.ivtowdlpydxiroyixikn
+      PGDATABASE: postgres
+      PGSSLMODE: require
+      PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r jobs/requirements.txt
+
+      - name: Run snapshot jobs
+        env:
+          ONLY: ${{ inputs.only || 'both' }}
+          ALLOW_LARGE_DROP: ${{ inputs.allow_large_drop && 'true' || 'false' }}
+        run: |
+          args=()
+          if [ "$ONLY" != "both" ]; then args+=(--only "$ONLY"); fi
+          if [ "$ALLOW_LARGE_DROP" = "true" ]; then args+=(--allow-large-drop); fi
+          python jobs/daily_snapshot.py "${args[@]}"

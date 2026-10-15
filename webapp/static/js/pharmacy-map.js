@@ -116,23 +116,23 @@ function loadPharmacies(date) {
         onEachFeature: (f, layer) => layer.bindPopup(popupHtml(f.properties)),
       }).addTo(map);
       document.getElementById('pharmacy-count').textContent = geojson.features.length;
+      updateModeNote(geojson);
     });
 }
 
-function updateModeNote(dateStr, cfg) {
+// Driven by what the API actually used for this date, not re-derived
+// here, so the note can't disagree with the points on the map.
+function updateModeNote(geojson) {
   const noteEl = document.getElementById('mode-note');
-  const selected = new Date(dateStr + 'T00:00:00Z');
-  const lastBackfilled = new Date(cfg.last_backfilled_date + 'T00:00:00Z');
-  const observed = cfg.observed_dates_available;
-  const isObservedDate = observed.includes(dateStr);
+  const dateStr = geojson.as_of_date;
 
   let mode;
-  if (isObservedDate) {
-    mode = `<span class="limitation-note--mode">Observed snapshot</span> — a real daily capture of the dataset on ${dateStr}, not reconstructed.`;
-  } else if (selected <= lastBackfilled) {
-    mode = `<span class="limitation-note--mode">Backfilled estimate</span> — based on when each pharmacy's federal registration (NPI) was first recorded, not a direct observation of ${dateStr}.`;
+  if (geojson.basis === 'observed' && geojson.observed_date === dateStr) {
+    mode = `<span class="limitation-note--mode">Observed snapshot</span> — the federal NPI registry as swept on ${dateStr}, not reconstructed.`;
+  } else if (geojson.basis === 'observed') {
+    mode = `<span class="limitation-note--mode">Most recent observed snapshot (${geojson.observed_date})</span> — the registry wasn't swept on ${dateStr}, so this shows the last real observation before it.`;
   } else {
-    mode = `<span class="limitation-note--mode">No snapshot for this exact date yet</span> — showing the most recent available data. Daily granularity only starts accumulating once Day 8's automated loading is running.`;
+    mode = `<span class="limitation-note--mode">Backfilled estimate</span> — based on when each pharmacy's federal registration (NPI) was first recorded, not a direct observation of ${dateStr}. It can show openings but not closures.`;
   }
   noteEl.innerHTML = mode;
 }
@@ -145,14 +145,12 @@ fetch('/api/pharmacy/config')
       minDate: cfg.slider_min_date,
       maxDate: cfg.slider_max_date,
       initialDate: cfg.slider_max_date,
+      // One marker for where daily observation begins - a tick per
+      // observed day would bury the slider within a few weeks.
       markers: [{ date: cfg.last_backfilled_date, label: 'Last backfilled date' }]
-        .concat(cfg.observed_dates_available.map(d => ({ date: d, label: 'Observed snapshot' }))),
-      onChange: (dateStr) => {
-        loadPharmacies(dateStr);
-        updateModeNote(dateStr, cfg);
-      },
+        .concat(cfg.first_observed_date ? [{ date: cfg.first_observed_date, label: 'First observed registry snapshot' }] : []),
+      onChange: (dateStr) => loadPharmacies(dateStr),
     });
-    updateModeNote(slider.getValue(), cfg);
     loadPharmacies(slider.getValue());
   });
 

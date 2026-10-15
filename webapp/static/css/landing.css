@@ -1,0 +1,132 @@
+/* Landing page. Colors come from the tokens in map.css so light/dark
+   mode stays in sync with the two map pages. */
+
+html, body.landing { height: auto; }
+
+body.landing {
+  background: var(--page-plane);
+  line-height: 1.55;
+}
+
+.landing__main {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 48px 16px 32px;
+}
+
+.landing a { color: var(--cat-chain); }
+
+.landing__eyebrow {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.landing h1 {
+  margin: 0 0 12px;
+  font-size: clamp(26px, 5vw, 36px);
+  line-height: 1.2;
+}
+
+.landing__lede {
+  margin: 0 0 28px;
+  max-width: 62ch;
+  font-size: 17px;
+  color: var(--text-secondary);
+}
+
+.landing__entries {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.entry {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--cat-chain);
+  border-radius: 8px;
+  background: var(--surface-1);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 120ms ease, transform 120ms ease;
+}
+.landing a.entry { color: inherit; }
+.entry:hover,
+.entry:focus-visible {
+  border-color: var(--cat-chain);
+  transform: translateY(-1px);
+}
+.entry:focus-visible { outline: 2px solid var(--cat-chain); outline-offset: 2px; }
+
+.entry__title {
+  font-size: 17px;
+  font-weight: 600;
+}
+.entry__title::after { content: " \2192"; color: var(--cat-chain); }
+
+.entry__desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.landing__section {
+  margin-top: 48px;
+}
+
+.landing h2 {
+  margin: 0 0 16px;
+  font-size: 20px;
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: 16px 28px;
+}
+
+.step h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+.step p {
+  margin: 0;
+  font-size: 14.5px;
+  color: var(--text-secondary);
+}
+
+.landing__limits {
+  padding: 20px 22px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-1);
+}
+.landing__limits h2 { margin-bottom: 10px; }
+.landing__limits ul {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  font-size: 14.5px;
+  color: var(--text-secondary);
+}
+.landing__limits li { margin-bottom: 6px; }
+.landing__limits strong { color: var(--text-primary); }
+.landing__limits p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.landing__footer {
+  margin-top: 48px;
+  padding-top: 16px;
+  border-top: 1px solid var(--gridline);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.landing__footer p { margin: 0 0 6px; }

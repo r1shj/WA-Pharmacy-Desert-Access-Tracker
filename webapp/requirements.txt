@@ -1,3 +1,3 @@
-fastapi
-uvicorn[standard]
-psycopg2-binary
+fastapi==0.128.8
+uvicorn[standard]==0.39.0
+psycopg2-binary==2.9.12

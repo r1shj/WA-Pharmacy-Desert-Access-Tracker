@@ -1093,3 +1093,266 @@ specifies. Zero console errors across the full test pass. Confirmed the
 Day 7 pharmacy map is unaffected by the shared `map.css` additions. See
 `webapp/main.py`, `webapp/static/js/shortage-map.js`,
 `webapp/static/shortage_map.html`.
+
+---
+
+## 2026-10-15 — Found: the daily pharmacy snapshot job never observed anything; 85 copies not loaded
+
+**Decision:** Did not load the 86 accumulated pharmacy snapshot files into
+`pharmacy_snapshots`. The table keeps its 1,811 backfilled rows plus the
+single 2026-07-18 observed snapshot (3,622 rows). The GitHub Actions job
+replaces the old script with a real daily NPPES re-sweep (see the GitHub
+Actions entry below). User chose this over loading the files as-is or under
+a separate label.
+
+**Why:** `day8_prep/snapshot_pharmacies_today.py` (built in Day 8 prep)
+copied the local file `day3/wa_pharmacies_deduped.csv` every day and never
+queried NPPES. Of 86 files (2026-07-18 to 2026-10-15), 85 are byte-
+identical once the date column is ignored; the one that differs (07-18)
+does so only because the local file was reclassified between 07-18 and
+07-19 (the Day 5 banner fix), not because anything changed in the real
+world. Loading them as `observed` would have added ~155,000 rows claiming
+86 days of observation that never happened.
+
+**Evidence:** content hashes of every file with the date column stripped:
+85 share one hash, 1 differs. Coverage: 86 of 90 calendar days; missing
+2026-08-17, 08-27, 10-01, 10-10 - consistent with the launchd caveat
+(machine asleep or logged out), and part of why the job moves to GitHub
+Actions.
+
+---
+
+## 2026-10-15 — Shortage snapshots folded into the interval table; dropouts labeled "last observed", never "resolved"
+
+**Decision:** Replayed the 85 daily shortage snapshot files after the
+2026-07-18 baseline, in date order, through
+`jobs/shortage_sync.apply_observation()` - the same function the daily
+GitHub Actions job uses, so the backfill and the forward job can't diverge.
+Added `last_observed_date` and `end_date_basis` to `shortages`, and a third
+tier: tier 1 = confirmed resolved (status flipped to Resolved), tier 2 =
+open, tier 3 = left openFDA's feed without ever being marked Resolved,
+`end_date` = last day seen, `end_date_basis = 'last_observed_in_feed'`.
+User chose this over leaving the July data as-is.
+
+**Why the separate label matters (and turned out to matter a lot):** all
+35 dropouts were "To Be Discontinued" entries, and all 35 left the feed
+364-369 days after their FDA posting date. That pattern fits
+discontinuation notices expiring from FDA's list about a year after
+posting - i.e. the product was discontinued, the opposite of a shortage
+resolving. Older To Be Discontinued entries (posted as far back as 2012)
+are still listed, so this is an observed pattern, not a confirmed FDA
+rule. Labeling dropouts "resolved" would have been wrong for every one.
+
+**Safeguards (both in the shared function):** refuses a feed whose row
+count doesn't match openFDA's own reported total, and refuses to close
+intervals if more than 25% of open shortages vanish in one day (far more
+likely a broken feed than real change). Sanity-checked the history first:
+daily distinct counts ranged smoothly from 231 to 245 with no dips, and 0
+shortages ever dropped out and came back.
+
+**Gap closed:** the old snapshot script never saved `dosage_form` or
+`therapeutic_category`. The 40 shortages new since July were all still in
+the live feed, so their categories came from a fresh openFDA pull - 0
+rows left uncategorized. The new job saves categories every day.
+
+**Evidence:** replay result matched an independent first-vs-last diff
+exactly: 40 added, 5 newly resolved, 35 dropped out, 0 reappeared. Table:
+234 -> 274 rows (231 open, 8 confirmed resolved, 35 last observed).
+Active chronic-condition shortages today: 105 -> 103, so current
+vulnerability scores fall slightly once stale entries close. Pre-replay
+backup kept locally. See `day9/schema_day9.sql`,
+`day9/backfill_shortage_snapshots.py`, `jobs/shortage_sync.py`.
+
+---
+
+## 2026-10-15 — Supabase migration: include-list of 9 tables, PostGIS in `extensions`, API roles locked out
+
+**Decision:** Migrated only the 9 tables the app and daily job read or
+write (`physical_locations`, `pharmacies`, `census_tracts`,
+`census_block_groups`, `pharmacy_snapshots`, `shortages`,
+`border_buffer_locations`, `npi_review_queue`, `snapshot_runs`) via an
+explicit `pg_dump -t` include-list, `--no-owner --no-privileges`,
+restored in a single transaction. Left behind ~65 MB of raw build-staging
+tables (`bg_polygons_raw`, `tiger_tracts_raw`, `urban_areas_raw`,
+`all_included_pharmacy_points`, border-zip helpers) and GDAL's own
+`ogr_system_tables.metadata` - all regeneratable, none read at runtime.
+
+**PostGIS in `extensions`, not `public`:** Supabase recommends it, and in
+`public` PostGIS's `spatial_ref_sys` would be exposed through Supabase's
+auto-generated REST API. The dump had exactly 5 `public.geometry(...)`
+column types (one per geometry column), rewritten to
+`extensions.geometry(...)`; nothing else referenced a PostGIS object. The
+app's unqualified `ST_*` calls still resolve because Supabase's default
+`search_path` includes `extensions`. Local PostGIS is 3.6, Supabase 3.3 -
+every PostGIS function the app uses exists in 3.3.
+
+**API roles locked out:** Supabase exposes every `public` table through a
+REST API reachable with the project's anon key, which is public by design.
+Enabled RLS on all 9 tables (no policies) and revoked every privilege from
+`anon` and `authenticated` (they still held `REFERENCES`/`TRIGGER`/
+`TRUNCATE` from Supabase's default grants; `TRUNCATE` isn't governed by
+RLS). The app and job connect as the table owner, which bypasses RLS.
+
+**Evidence:** row counts match on all 7 data tables; all 5 geometry
+columns are SRID 4326, correct type, same populated counts, 100% valid;
+the Day 5 `ST_Within` tract cross-check run on Supabase gives 1,722/1,722
+agree, 0 disagree - identical to local; all 5 GIST indexes present. As
+`anon`: permission denied. As the app role: all 1,941 pharmacies.
+Password read from the environment per command, never printed or written
+to a file.
+
+---
+
+## 2026-10-15 — Email alerts dropped from scope (future work)
+
+**Decision:** No subscribe form, no SendGrid, no subscriber table, and no
+mention of alerts or notifications on any page. Confirmed nothing of the
+kind exists in `webapp/`, `jobs/`, or `day9/`.
+
+**Future work - email alerts for newly posted national shortages:** the
+data for it already exists. The daily shortage sync records every
+shortage's first appearance (`added` in `jobs/shortage_sync.py`'s run
+summary, logged to `snapshot_runs`), so a "newly posted" digest needs no
+new data source - only a subscriber store, a sender, and unsubscribe
+handling. Any copy must keep this project's framing: "a national shortage
+was newly reported - check with your local pharmacy for availability,"
+never a claim about any specific pharmacy's stock.
+
+---
+
+## 2026-10-15 — Landing page: static, no live numbers, limitations up front
+
+**Decision:** `/` serves a static page (`webapp/static/landing.html`)
+with a short project description, one entry card each for
+`/map/pharmacy` and `/map/shortages`, a four-part "How it works"
+(pharmacies, deserts, shortage context, and the two timeline sliders),
+a "What this can't tell you" box, data attribution, and the GitHub
+link. Each map's nav gained an "About" link back to it.
+
+**Why no live counts on the landing page:** every number on it would
+need either a DB round-trip on the one page that should load instantly
+(and survive a paused Supabase free-tier project) or a hardcoded value
+that goes stale the next time the daily jobs change a count - the exact
+"231 of 234" problem fixed on the shortage map earlier today. The maps
+already show live counts. The page states only the fixed methodology
+(1 mi urban / 10 mi rural, 80%-of-AMI proxy, OR/ID border pharmacies,
+slider ranges back to 2005 and 2012), each checked against the data and
+DECISIONS entries before publishing.
+
+**Why these four limitations:** they're the ones a first-time visitor
+is most likely to get wrong: thinking a shortage means their pharmacy is
+out of stock, that a registered pharmacy is confirmed open, that
+distances are driving distances, or that the income line is HUD's
+official figure. The page links to LIMITATIONS.md and DECISIONS.md for
+the rest rather than restating them. No mention of alerts or
+notifications (see the entry above).
+
+---
+
+## 2026-10-15 — Daily pharmacy snapshot is a real NPPES re-sweep, not a file copy
+
+**Decision:** `jobs/pharmacy_sync.py` replaces
+`day8_prep/snapshot_pharmacies_today.py` (which re-saved the static Day 3
+CSV daily). Every run re-queries NPPES with exactly the Day 2 population
+definition: every ZIP 98001-99403, taxonomy "Pharmacy", NPI-2, kept only
+if the `LOCATION` address is in WA. Each of the 1,941 known NPIs is then
+**active** (counts), **deactivated** (missing from the sweep *and* a
+direct lookup by number returns nothing - the API only serves active
+NPIs), **relocated** (LOCATION moved to another ZIP or out of WA), or
+**retaxonomied** (no pharmacy taxonomy any more). A location gets an
+`observed` row for the day if at least one NPI is active, with that
+day's active NPIs as `contributing_npis`. Same-ZIP street-text changes
+still count but are listed for review. New NPIs go to `npi_review_queue`
+instead of the map.
+
+**Why a direct lookup before calling anything deactivated:** a known NPI
+can drop out of the sweep for reasons other than deactivation (taxonomy
+or address change). Only an empty lookup by number is evidence of
+deactivation, and a lookup that *fails* aborts the run rather than being
+read as "gone."
+
+**Why new NPIs go to a queue, not the map:** a map location needs
+pharmacy type, walk-in status, ownership, address dedup against existing
+locations, and a Census geocode. Each of those took a reviewed day of
+work (Days 2-4) with manual-review flags. Auto-adding would put
+unclassified points on the map with no ownership color and possibly
+duplicate an existing storefront.
+
+**Safeguards (any one aborts the run before anything is written):** any
+ZIP failing after 4 retries or exceeding the 1,200-result cap; more than
+10% of known NPIs missing from the sweep (a broken sweep, not mass
+closure); more than 3% of the previous snapshot's locations disappearing
+(override with `--allow-large-drop` only after reviewing). Re-running on
+the same day replaces that day's rows.
+
+**Evidence (first real run, 2026-10-15):** 1,403 ZIPs in ~30s; 1,952
+WA-located pharmacy NPIs = all 1,941 known + 11 new (registered
+2026-07-20 to 2026-10-06, e.g. three Fred Meyer stores on 2026-08-06);
+154 known records updated since August; 0 deactivated, relocated or
+retaxonomied. Proof that the sweep is live, and a measure of how slowly
+NPPES records closures (see LIMITATIONS). The deactivated, relocated,
+retaxonomied and address-changed branches were tested on synthetic
+records. Both abort safeguards were tested by simulating a 4.4% location
+drop and a 20% sweep gap: both aborted and wrote 0 rows. A same-day
+rerun left exactly 1,811 rows.
+
+---
+
+## 2026-10-15 — GitHub Actions runs both daily jobs against Supabase
+
+**Decision:** `.github/workflows/daily-snapshot.yml` runs
+`jobs/daily_snapshot.py` daily at 14:17 UTC (7:17 Pacific in summer),
+plus manual runs (`workflow_dispatch`, optionally one job, optionally
+`allow_large_drop`). It connects through libpq's `PG*` variables:
+host, port, user and database are in the workflow file (not secret - the
+project ref is part of any Supabase URL), and only `PGPASSWORD` comes from
+the `SUPABASE_DB_PASSWORD` repository secret. The secret was set by piping
+the local environment variable straight into `gh secret set`, never
+printed.
+
+**Why these choices:**
+- **Each job gets its own transaction and `snapshot_runs` row**
+  (`ok`/`aborted`/`failed` + summary or error), so an openFDA outage
+  doesn't block the pharmacy sweep, and every day's outcome is queryable.
+  Any non-ok job exits non-zero so the run shows red.
+- **"Today" is Pacific time**, not the runner's UTC clock. This is a WA
+  dataset, and a UTC date would be a day ahead every evening.
+- **Off the top of the hour**, because GitHub delays scheduled runs most
+  at :00.
+- **Pinned dependencies** (`jobs/requirements.txt`,
+  `webapp/requirements.txt`) so a Render or Actions rebuild can't pick up
+  a breaking release.
+
+**Supabase is now the source of truth.** The local `pharmacy_tracker`
+database is a development copy and will drift from it. The local launchd
+agent (`day8_prep/run_daily_snapshots.sh`) still writes CSVs and is now
+redundant.
+
+---
+
+## 2026-10-15 — Pharmacy map uses the latest observed snapshot on or before each date
+
+**Decision:** `/api/pharmacy/pharmacies` now picks a basis per date. On
+or after the first observed snapshot, it shows the NPIs active in the most
+recent observed snapshot on or before that date, so deactivations found
+by the daily sweep actually disappear and the popup lists only active
+NPIs. Before it, it uses the enumeration backfill as before. The response
+carries `basis` and `observed_date`, and the mode note under the slider is
+driven by those, so the note can't disagree with the points. The slider
+gets one marker where observation begins, not one per day.
+`/api/pharmacy/config` now returns every observed date (it previously
+returned only the first).
+
+**Why:** the old "existed since first snapshot" rule could never remove a
+location, which would have made the new daily sweep invisible on the map.
+Verified: today → "Observed snapshot" (1,624 locations shown);
+2026-08-01 → "Most recent observed snapshot (2026-07-18)"; 2012 →
+"Backfilled estimate" (1,179). The 2026-07-10 backfill count matches the
+observed count, as expected with no deactivations.
+
+**Also:** static JS/CSS is now served with `Cache-Control: no-cache`.
+Testing showed the browser running the previous `pharmacy-map.js` against
+the new API. With no build step to fingerprint filenames, revalidation
+(an ETag 304) is the simplest way to make a redeploy reach returning
+visitors. `db()` in `webapp/main.py` now goes through `jobs/db.py`
+(`DATABASE_URL` → `PG*` → local), which Render needs.

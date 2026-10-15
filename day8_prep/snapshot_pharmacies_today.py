@@ -1,4 +1,8 @@
 """
+SUPERSEDED by jobs/pharmacy_sync.py (DECISIONS.md 2026-10-15): this
+re-saves the static Day 3 CSV, so every "snapshot" it wrote was a copy
+and observed nothing. Kept only as a record of what ran before.
+
 Writes today's snapshot of the full deduped/classified WA pharmacy
 dataset, using the same shared snapshot_infra as the shortage layer.
 Run this daily going forward (per pharmacy task #3) - real observed

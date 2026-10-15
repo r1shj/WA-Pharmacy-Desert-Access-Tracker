@@ -13,6 +13,7 @@
     <h1 class="app__title">Pharmacy Access Map</h1>
     <span class="app__subtitle">Washington State — physical access points, not confirmed local availability</span>
     <nav class="app__nav">
+      <a href="/">About</a>
       <a href="/map/pharmacy" class="active">Pharmacy Access</a>
       <a href="/map/shortages">Shortage Context</a>
     </nav>
@@ -44,11 +45,13 @@
     <div id="slider-root"></div>
     <div id="mode-note" class="limitation-note"></div>
     <div class="limitation-note">
-      <strong>This is a growth-only history, not a closures record.</strong>
+      <strong>Before October 2026 this is a growth-only history, not a closures record.</strong>
       NPPES (the federal registry this is built on) does not publicly expose when a pharmacy
-      deactivates its registration, so a pharmacy that has since closed will still appear
-      present at every date after it first registered. Moving the slider back in time can only
-      add locations, never remove ones that have actually closed.
+      deactivated its registration, so for earlier dates a pharmacy that has since closed still
+      appears present at every date after it first registered. Since 2026-10-15 the registry is
+      re-swept daily and a location drops off once none of its registrations are active — but
+      pharmacies often don't deactivate promptly when they close, so a closure can still lag
+      or never appear. Newly registered pharmacies aren't added until they're reviewed.
     </div>
     <div class="limitation-note">
       <strong>Dates before ~2008 reflect a registration deadline, not necessarily real openings.</strong>
