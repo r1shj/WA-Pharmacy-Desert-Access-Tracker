@@ -72,10 +72,6 @@ the owner decisions below.
 - **Owner decision pending:** whether to rewrite git history to purge
   individuals' names, which are still in the initial commit. See the
   Day 11 fixes entry for what it involves. The current tree has none.
-- **Leaflet map size can go stale after load** (up to 77px too tall at
-  1440x1080), so the map's center sits slightly low. Fix: a
-  `ResizeObserver` on `#map` calling `map.invalidateSize()`. See the
-  final-polish entry.
 - **The desert count is a range, 176-237 block groups,** until the 474
   REVIEW-bucket pharmacies are resolved (LIMITATIONS.md).
 - **11 newly registered pharmacies** are in `npi_review_queue` and not on
@@ -2090,3 +2086,54 @@ finishes laying out.
   counts below the map change the container's height.
 - **Fix (later):** a `ResizeObserver` on `#map` calling
   `map.invalidateSize()`.
+
+---
+
+## 2026-10-16 — Map size kept in sync with its container (ResizeObserver); open item closed
+
+**Change (`6185f9c`, webapp only):** both map scripts replace their three
+one-off `invalidateSize()` calls (on window load, after 150ms, on window
+resize) with `new ResizeObserver(() => map.invalidateSize()).observe(#map)`.
+Nothing else changed.
+
+**Why:** Leaflet measures the map once at init. The slider, notes and
+counts below the map fill in later and change the container's height,
+so Leaflet's size went stale.
+
+**Tested** in headless Chrome against the live site, before and after
+the deploy, with an identical script:
+- Leaflet's height vs the container's;
+- the distance between the intended center (47.4, -120.6) and the middle
+  of the visible map;
+- a popup opened with its anchor 40 and 10 px above, and 20 and 50 px
+  below, the visible bottom edge.
+
+| | Before (desktop 1440x1080) | After (desktop) | Phone 375x812, before and after |
+|---|---|---|---|
+| Leaflet vs container height | 904 vs 827 (shortage), 695 vs 653 (pharmacy) | equal | equal |
+| Off-center | 39 px / 22 px | 1 px | 1 px |
+| Popup anchored 20 / 50 px below the visible edge | no auto-pan; clipped 7 / 37 px (shortage), 7 / 17 px (pharmacy) | auto-pans 31-32 / 61 px; clipped 0 | clipped 0 |
+| Popup anchored inside the visible area | fully visible | fully visible | fully visible |
+
+At phone width the stacked layout gives the map a fixed 55vh height, so
+it never had the mismatch.
+
+**Why the test ran headless:** the in-app browser pane was hidden while
+testing and rendered no frames (0 animation frames in 500ms).
+`ResizeObserver` only fires as part of rendering a frame, so a hidden
+pane can't exercise it. Headless Chrome renders frames.
+
+**Sliders re-tested** on the live site, both pages, desktop and phone, with
+real mouse drags sent through Chrome's input pipeline
+(`Input.dispatchMouseEvent`): full range, partial and back. Every check
+agreed: readout = note/summary date, count = markers/items = a fresh API
+response, 0 of 5,311 colors mismatched.
+- **Console:** the only message in every run is a 404 for `/favicon.ico`,
+  which the site doesn't have. It predates this change, and Chrome doesn't
+  show favicon failures in the DevTools console. Not changed; this commit
+  was scoped to the resize fix.
+
+**README screenshots retaken:** the old ones were captured with the
+stale size. Aligning old against new shows the maps were 38px
+(shortage) and 21px (pharmacy) low, matching the measured off-center
+error.
