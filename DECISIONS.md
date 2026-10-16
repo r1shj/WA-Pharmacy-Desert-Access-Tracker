@@ -1846,3 +1846,49 @@ correctly (e.g. 2018-02-02 shows 1,414 locations, matching the API). At
 1280x800 the desktop layout is unchanged: map 980x395 with the 300px
 sidebar, the notes panel capped and scrolling, the slider sticky, and
 no page scroll.
+
+---
+
+## 2026-10-16 — Day 10 review: WSU comparison corrected, safeguards stated precisely, shortage-map framing made explicit
+
+**WSU map, re-read layer by layer from its ArcGIS data:**
+- Washington Pharmacy Deserts: 86 towns, 2019 population, "miles to a
+  pharmacy" (10.2-27.7), nearest pharmacy name. 5 towns list an Oregon
+  pharmacy.
+- Critical Access Hospitals / Acute Care: 39.
+- RHI WSU Pharmacy Student Rotation Sites: 13.
+- MUA/MUP: a static PNG overlay at 40% opacity, not data.
+- Rural Counties: one drawn feature.
+
+The README's Related Work implied two things it lacks that it partly has:
+- a **border correction** - contradicted, since its desert layer names
+  Oregon pharmacies for 5 towns;
+- an **income dimension** - partly contradicted, since its MUA/MUP
+  overlay reflects HRSA underservice designations that (as far as I could
+  tell) weigh poverty.
+
+Rewritten to state what each layer contains. "What this project adds" is
+now scoped to what the layers show, under "as far as I could tell in
+October 2026". The publisher attribution (WSU Rural Health Initiative,
+inferred from a wsu.edu owner and the "RHI WSU" layer name), "federally
+designated", "rural towns" and "practitioner-oriented" were uncertain or
+editorial, and are now hedged or removed. The landing page and the
+policy brief don't mention the WSU map.
+
+**Safeguards in the README now match the code exactly:**
+- openFDA record count vs. its reported total;
+- `MAX_DROPOUT_FRACTION = 0.25` of open shortages;
+- NPPES `_get` 4 attempts with 1/2/4s backoff, and the 1,200-result cap
+  (`MAX_SKIP = 1000`);
+- `MAX_MISSING_FRACTION = 0.10`;
+- a failed direct NPI lookup aborts;
+- `MAX_LOCATION_DROP_FRACTION = 0.03`, measured against the **previous
+  observed snapshot**, not "a day". The README previously said "in a
+  day".
+
+**Shortage map framing:** the README's pages table and the landing page
+now say plainly that the map is national context and that its
+geographic pattern comes entirely from the desert classification's
+access and income measures. Previously the README said so only in
+Methodology, and the landing page said "access and income" without tying
+it to the desert classification.

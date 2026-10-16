@@ -25,7 +25,7 @@ availability.
 | Page | Current view | Timeline slider |
 |---|---|---|
 | [Pharmacy Access Map](https://wa-pharmacy-desert-access-tracker.onrender.com/map/pharmacy) | Every mapped pharmacy location, colored by ownership, over block groups shaded by desert status (with OR/ID border pharmacies shown for reference) | Which locations had registered by a date, back to 2005. From 2026-07-18 on, which were active in an observed registry snapshot |
-| [Shortage Context Map](https://wa-pharmacy-desert-access-tracker.onrender.com/map/shortages) | FDA's national shortage list beside a 0-100 community vulnerability index per block group | Which national shortages were active on a date, back to 2012, with the index recomputed for that date |
+| [Shortage Context Map](https://wa-pharmacy-desert-access-tracker.onrender.com/map/shortages) | **National** context: FDA's national shortage list beside a 0-100 vulnerability index per block group. The index's geographic pattern comes entirely from the desert classification's access and income measures; the shortage part is one national number, the same everywhere | Which national shortages were active on a date, back to 2012, with the index recomputed for that date |
 
 The first load after a quiet period can take 30-60 seconds while the free
 hosting tier wakes up.
@@ -185,7 +185,8 @@ score = access (0 or 40) + income (0 or 40) + shortage (0-20)
 shortage = min(20, round(20 × active chronic-condition shortages / 150))
 ```
 
-- **Access and income** come from the desert classification above.
+- **Access and income** come from the desert classification above, and
+  they are the **only** source of the map's geographic pattern.
 - **The shortage term is ONE national number, identical for every block
   group.**
   - It counts the openFDA shortages active on the selected date in 7
@@ -263,12 +264,19 @@ shortage = min(20, round(20 × active chronic-condition shortages / 150))
     only if both runs miss.
   - Each run re-sweeps NPPES and re-pulls openFDA. A second run the same day
     overwrites that day's snapshot rather than adding to it.
-  - Safeguards abort a run before anything is written if:
-    - the openFDA feed is incomplete;
-    - more than a quarter of open shortages vanish at once;
-    - any ZIP code fails;
+  - Safeguards abort a run before any snapshot data is written. Each job
+    runs in its own transaction, so a run that fails mid-way also writes
+    nothing; only its `snapshot_runs` log row is kept. A run aborts if:
+    - openFDA returns fewer records than its own reported total;
+    - more than 25% of open shortages vanish from one day's feed;
+    - any NPPES ZIP query still fails after 4 attempts or exceeds the
+      API's 1,200-result cap;
     - more than 10% of known NPIs are missing from the sweep;
-    - more than 3% of pharmacy locations disappear in a day.
+    - a direct lookup of a missing NPI fails (a failure is never read as a
+      deactivation);
+    - more than 3% of the pharmacy locations in the previous observed
+      snapshot would disappear (overridable only with `--allow-large-drop`
+      after review).
 - **Caching:** Both date sliders are served from in-memory caches with fixed
   size caps (the whole app peaks at about 140 MB of the host's 512 MB),
   refreshed every 5 minutes and backed by a 4-connection database pool kept
@@ -290,29 +298,43 @@ shortage = min(20, round(20 × active chronic-condition shortages / 150))
 
 ## Related work
 
-Washington State University's Rural Health Initiative publishes an ArcGIS
-web map, ["Pharmacy care in rural Washington"](https://www.arcgis.com/home/item.html?id=a0472a0adb594ca38e0e1d2e55ce3e1a)
-(created December 2023, last updated February 2024). Its layers are:
-- a Washington pharmacy-deserts layer listing 86 rural towns, each with its
-  2019 population, the distance to its nearest pharmacy (10.2 to 27.7 miles)
-  and which pharmacy that is, in some cases across the Oregon border;
-- critical access and acute-care hospitals;
-- WSU pharmacy student rotation sites;
-- federally designated Medically Underserved Areas and Populations;
-- rural counties.
+As far as I could tell in October 2026, the closest existing resource is an
+ArcGIS Online web map, ["Pharmacy care in rural Washington"](https://www.arcgis.com/home/item.html?id=a0472a0adb594ca38e0e1d2e55ce3e1a).
+It's published from a Washington State University account and appears to be
+associated with WSU's Rural Health Initiative (its rotation-site layer is
+labelled "RHI WSU"). Its item metadata shows it was created in December 2023
+and last updated in February 2024. It has five layers:
 
-It is a focused, practitioner-oriented view of rural access, and its
-hospital, rotation-site and MUA/MUP context isn't in this project.
+- **Washington Pharmacy Deserts:** 86 towns, each with a 2019 population, a
+  "miles to a pharmacy" figure (10.2 to 27.7 miles) and the name of that
+  pharmacy. Five of the towns list an Oregon pharmacy (in Astoria or The
+  Dalles), so cross-border pharmacies are taken into account. The layer
+  doesn't say how the miles were measured.
+- **Critical Access Hospitals / Acute Care:** 39 hospitals, with address,
+  phone and website.
+- **RHI WSU Pharmacy Student Rotation Sites:** 13 sites.
+- **MUA / MUP (Medically Underserved Areas and Populations):** shown as a
+  static image overlay, not data. As far as I could tell, these are the
+  federal HRSA designations, which weigh poverty alongside provider supply
+  and other health factors.
+- **Rural Counties:** a drawn overlay.
 
-This project complements it with:
-- statewide **block-group** coverage, urban as well as rural, measured from
-  population-weighted centers, with a systematic 20-mile Oregon/Idaho border
-  correction;
-- an **income threshold** (a low-income AND low-access definition, using the
-  HUD-style proxy described above);
-- **ownership classification** with an explicit "unknown" category;
-- **national shortage context** and a vulnerability index;
-- **two timeline sliders** backed by a daily re-sweep of the registry.
+It pairs rural pharmacy distance with health-care context this project
+doesn't include: hospitals, rotation sites and underserved-area designations.
+
+What this project adds, as far as I could tell from those layers:
+- **Statewide block-group coverage**, urban as well as rural, measured from
+  population-weighted centers, with the same 20-mile Oregon/Idaho border
+  buffer applied to every block group.
+- **An income condition built into the desert definition** (low income
+  AND low access). The WSU desert layer is distance-only. Income-related
+  need appears there only through the separate MUA/MUP overlay, which isn't
+  combined with distance.
+- **Ownership classification** with an explicit "unknown" category. The
+  WSU layer names the nearest pharmacy but doesn't classify it.
+- **National shortage context** and a vulnerability index.
+- **Two timeline sliders** backed by a twice-daily registry re-sweep. The
+  WSU map is a static snapshot.
 
 ---
 
