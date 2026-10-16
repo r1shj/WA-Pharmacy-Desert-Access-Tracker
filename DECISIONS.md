@@ -72,9 +72,10 @@ the owner decisions below.
 - **Owner decision pending:** whether to rewrite git history to purge
   individuals' names, which are still in the initial commit. See the
   Day 11 fixes entry for what it involves. The current tree has none.
-- **`day2/wa_pharmacies_classified.csv` predates the 2026-07-18
-  classification fix:** 13 rows would change if regenerated. Not used
-  downstream.
+- **Leaflet map size can go stale after load** (up to 77px too tall at
+  1440x1080), so the map's center sits slightly low. Fix: a
+  `ResizeObserver` on `#map` calling `map.invalidateSize()`. See the
+  final-polish entry.
 - **The desert count is a range, 176-237 block groups,** until the 474
   REVIEW-bucket pharmacies are resolved (LIMITATIONS.md).
 - **11 newly registered pharmacies** are in `npi_review_queue` and not on
@@ -2043,3 +2044,49 @@ remaining hits were two junk NPPES entries made of ordinary words
 README has a one-line License section noting that the data sources
 (CMS NPPES, U.S. Census Bureau, openFDA, OpenStreetMap) keep their own
 terms.
+
+---
+
+## 2026-10-16 — Final polish: classified.csv untracked, repository metadata, README screenshots
+
+**`day2/wa_pharmacies_classified.csv`: untracked, not regenerated.**
+Regenerating was quick, but `day2/DAY2_REPORT.md` quotes that file's
+exact Day 2 counts ("1,074 included / 83 excluded / 43 flagged" out of
+1,200, and the per-taxonomy table). A regenerated file, which would
+reflect the 2026-07-18 classification fix, would silently contradict the
+report. The file is a superseded intermediate: the 1,200-record capped
+sample, contaminated by out-of-state LOCATION records and not used
+downstream. So it's removed from tracking (`git rm --cached`; local copy
+kept; added to `.gitignore`). DAY2_REPORT.md gets a dated note where it
+links the file, so the link doesn't silently break.
+
+**GitHub metadata (via `gh repo edit`):**
+- description "Washington pharmacy access and national drug-shortage
+  context explorer";
+- homepage set to the live site;
+- topics postgis, fastapi, leaflet, public-health, geospatial, pharmacy.
+
+**README screenshots (`docs/pharmacy-map.png`,
+`docs/shortages-map.png`):** taken from the live site at 1440x1080
+with headless Chrome, driven over the DevTools protocol. The script waits
+in real time until the slider reports the date's data as loaded, then
+for the tiles. Chrome's simpler `--screenshot --virtual-time-budget`
+mode was tried first and rejected: fast-forwarded timers left a 22px band
+with no tiles at the bottom of the pharmacy map that a real browser
+doesn't show.
+
+**Found while checking that, not fixed here (this commit excludes
+`webapp/`):** Leaflet's idea of the map size can go stale after the page
+finishes laying out.
+- **Measured at 1440x1080:** on the shortage map, Leaflet's height is 904
+  vs an 827px container in a real browser. On the pharmacy map, 695 vs
+  653 in one real-time capture, while a real browser measured 653 vs 653,
+  so it depends on load timing.
+- **Effect:** the extra area is clipped, so nothing visibly breaks, but
+  the map's center sits a little low and popups near the bottom edge can
+  be clipped.
+- **Cause:** both pages call `invalidateSize()` only on window load,
+  after 150ms and on resize. They don't call it when the notes, slider or
+  counts below the map change the container's height.
+- **Fix (later):** a `ResizeObserver` on `#map` calling
+  `map.invalidateSize()`.

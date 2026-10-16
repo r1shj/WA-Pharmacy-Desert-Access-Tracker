@@ -30,6 +30,13 @@ availability.
 The first load after a quiet period can take 30-60 seconds while the free
 hosting tier wakes up.
 
+| Pharmacy Access Map | Shortage Context Map |
+|---|---|
+| [![Pharmacy Access Map: Washington block groups shaded by desert status, pharmacy locations colored by ownership, with the date slider and data notes below](docs/pharmacy-map.png)](docs/pharmacy-map.png) | [![Shortage Context Map: block groups shaded by the 0-100 vulnerability score, with the national shortage list in the sidebar and the date slider below](docs/shortages-map.png)](docs/shortages-map.png) |
+
+*Screenshots of the live site at desktop width (1440 × 1080), taken 2026-10-16.
+Map tiles © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors.*
+
 ---
 
 ## At a glance (as of 2026-10-16)
@@ -438,6 +445,7 @@ In GitHub Actions the database password comes from the repository secret
 | `day2/` - `day9/` | The pipeline as built, step by step (pulls, classification, dedup, geocoding, schema, desert classification) |
 | `DECISIONS.md` / `LIMITATIONS.md` | Every judgment call, and every known gap |
 | `LICENSE` | MIT license for the code |
+| `docs/` | README screenshots of both map pages |
 | `policy_brief.md` / `policy_brief.docx` | One-page summary of findings |
 
 ---

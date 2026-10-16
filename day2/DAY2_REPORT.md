@@ -30,7 +30,10 @@ terms) — deferred to Day 3+ since the task said not to build the pipeline yet.
 **Result: 1,074 included / 83 excluded / 43 flagged for manual review**, out of
 1,200 pulled. Nothing was deleted — every record keeps its `pharmacy_type`,
 `walk_in_access`, `included_in_access_analysis`, and `exclusion_reason` in
-[wa_pharmacies_classified.csv](wa_pharmacies_classified.csv).
+`wa_pharmacies_classified.csv`. *(Note added 2026-10-16: that file is no longer
+tracked in git. It was this superseded 1,200-record sample and predates the
+2026-07-18 classification fix. Regenerate it with `classify_pharmacy_type.py`.
+The analysis uses the full 1,941-record `wa_pharmacies_final.csv`.)*
 
 ### Two concrete data-quality findings (not hypothetical)
 
@@ -114,7 +117,9 @@ worked around:
 ## Files produced
 
 - `wa_pharmacies_full_raw.json` — raw API response, 1,200 records
-- `wa_pharmacies_full_flat.csv` — flattened, same 1,200
+- `wa_pharmacies_full_flat.csv` — flattened, same 1,200 *(not tracked in git: it
+  contains authorized officials' names and phone numbers)*
 - `wa_pharmacy_taxonomy_counts.csv` — taxonomy frequency table
 - `wa_pharmacies_classified.csv` — same 1,200 with `pharmacy_type`,
   `walk_in_access`, `included_in_access_analysis`, `exclusion_reason` added
+  *(not tracked in git; superseded, see note above)*

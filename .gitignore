@@ -82,5 +82,8 @@ day8_prep/snapshot_log.txt
 # titles and phone numbers that nothing in the app needs. Kept locally;
 # regenerate with explore_sources.py / day2 pull scripts if required.
 day2/wa_pharmacies_full_flat.csv
+# Superseded 1,200-record Day 2 sample (predates the 2026-07-18
+# classification fix); regenerate with day2/classify_pharmacy_type.py.
+day2/wa_pharmacies_classified.csv
 nppes_sample_flat.csv
 nppes_sample_raw.json
