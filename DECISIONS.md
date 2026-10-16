@@ -8,6 +8,80 @@ logged retroactively.
 
 ---
 
+## Current state (as of 2026-10-16)
+
+*A snapshot for orientation, kept up to date; the dated entries below are
+the permanent record.*
+
+**Live:** https://wa-pharmacy-desert-access-tracker.onrender.com - a
+landing page plus `/map/pharmacy` and `/map/shortages`.
+
+**What's deployed:**
+- **Web app (`webapp/`)** on Render's free tier. It auto-deploys from
+  `main` when files under `webapp/` change, because Render's root
+  directory is `webapp/`. The last such change, `7431264`, has been live
+  since 2026-10-16 19:05 UTC. Commits that only touch docs, `jobs/` or
+  the workflow don't redeploy. The instance sleeps after 15 idle
+  minutes, so the first visit after that takes about a minute.
+- **Database:** Supabase Postgres + PostGIS, reached through its
+  session pooler (15-client limit; the app uses a 4-connection pool).
+  Every table has row-level security and no grants for the API roles.
+  Supabase, not the local `pharmacy_tracker` database, is the source of
+  truth.
+- **Caching:** the slider data is served from capped in-memory caches,
+  so new snapshot data appears on the site within 5 minutes (entry:
+  "Slider cache caps...").
+
+**Daily data (GitHub Actions, `.github/workflows/daily-snapshot.yml`):**
+both jobs - the openFDA shortage sync and the full NPPES pharmacy
+re-sweep - run at **14:17 and 20:43 UTC**. Both times are always the same
+Pacific date, and the second run overwrites that day's snapshot rather
+than adding to it. Every run is logged in `snapshot_runs`. **Analyses
+should use the latest successful (`ok`) run per `(run_date, job)`.**
+Shortage change counts can be summed across a day's runs, but the
+pharmacy totals are state counts and must not be. The old local launchd
+job is disabled.
+
+**Done - Days 1-9:**
+1. Data exploration (NPPES, Census ACS).
+2. The complete WA pharmacy population (ZIP sweep past the 1,200 cap,
+   WA `LOCATION` filter, type classification).
+3. Ownership classification and address dedup.
+4. Geocoding and the ACS suppression audit.
+5. PostgreSQL + PostGIS schema and load.
+6. Pharmacy desert classification, including OR/ID border pharmacies.
+7. The Pharmacy Access Map.
+8. The Shortage Context Map and the vulnerability index.
+9. Deployment: GitHub, the Supabase migration with observed shortage
+   history, the landing page, the twice-daily Actions job with a real
+   NPPES re-sweep, Render. Plus the post-deploy fixes: vulnerability
+   colors on the continuous score, the slider 500s (connection pool,
+   caching, load-safe slider), no-cache pages, and a full-history
+   secret scan with no findings.
+
+**Next:**
+- **Day 10 - documentation:** the README, including future work - email
+  alerts for newly posted national shortages, and why there's no local
+  inventory data.
+- **Day 11 - final audit.**
+
+**Known open items:**
+- **11 newly registered pharmacies** are in `npi_review_queue` and not on
+  the map until they're classified, deduplicated and geocoded.
+- **No validation against WA DOH licensing records** - closures and
+  licensing status are unconfirmed (LIMITATIONS.md).
+- **Rotate the Census API key.** It was pasted in chat and passed on a
+  command line on Day 1. It's not in any file or commit, but it is in
+  the local session transcript.
+- **`jobs/db.py` is outside Render's root directory but imported by the
+  app.** A change to it alone won't redeploy the site - trigger a manual
+  deploy in Render.
+- **Free-tier timers:** GitHub disables the schedule after 60 days with
+  no pushes, and Supabase pauses after 7 days of inactivity
+  (LIMITATIONS.md).
+
+---
+
 ## 2026-07-18 — Study population inclusion rule (pharmacy_type)
 
 **Decision:** Of the taxonomy-coded WA pharmacy records, `community_retail`,
@@ -1604,3 +1678,56 @@ groups colored, 231 shortages listed, no errors.
   cleared while a date loads and varies in length, so the slider jumped
   vertically under the cursor between drags. Its space is now reserved
   (`7431264`); the slider stays at the same position in every state.
+
+---
+
+## 2026-10-16 — Slider cache caps, memory budget, staleness window, and pool size
+
+Details behind the caching in the entry above, measured rather than
+estimated.
+
+**Per-date caches are capped LRUs** (least-recently-used entry evicted
+when full):
+
+| Cache | Cap | Size per entry | Full |
+|---|---|---|---|
+| Pharmacy map responses (keyed by observed date, or by backfill prefix) | 24 | ≤ 0.9 MB | ~16 MB |
+| Observed-snapshot NPI sets | 8 dates | small | < 5 MB |
+| Shortage list responses | 256 dates | ≤ 70 KB | ~3 MB |
+| Vulnerability scores, by shortage points | 21 (every possible value, 0-20) | 1.49 MB | ~31 MB |
+
+Single-value caches are replaced on reload, never grown: the static
+polygon and border layers (10.6 MB, refreshed every 6 hours), the
+vulnerability base (hourly), and the shortage table and pharmacy data
+(every 5 minutes).
+
+**Memory, measured:** every cache was filled past its cap (400 and 600
+distinct dates; both date-keyed caches stopped exactly at 24 and 256).
+The whole process measured 133 MB, or **about 142 MB** with all 21
+vulnerability entries. That's ~28% of Render's 512 MB, with headroom
+for the pooled connections and for a reload, when old and new data
+briefly coexist.
+
+**Staleness window: 5 minutes.** A new snapshot reaches the site within
+5 minutes of the job committing it. If a reload fails, the previous data
+keeps being served and the reload is retried after 30 seconds.
+
+**Pool: 4 connections.** Supabase's session pooler admits 15 clients
+(measured). Those 15 are shared with the daily job, with a second app
+instance while Render swaps deploys (another 4), and with local psql.
+
+**Same output as before the caching:** old (one query per request) vs
+new endpoints on the same database. Local: 2,394 comparisons covering
+every pharmacy first-registration date and the day before it, every
+shortage interval start and end ±1 day, both slider minimums ±1, the
+backfill/observed boundary (2026-06-30 ±1, 2026-07-17..19, each observed
+date ±1), today, and the no-date default. Supabase: 277 comparisons over
+the same named boundaries with its three observed snapshots. **0
+mismatches.**
+
+**README-ready summary:** Both date sliders are served from in-memory
+caches with fixed size caps (the whole app peaks at about 140 MB of the
+host's 512 MB), refreshed every 5 minutes and backed by a 4-connection
+database pool kept under Supabase's 15-connection limit, so dragging a
+slider never overloads the database and new daily data appears on the
+site within 5 minutes.
