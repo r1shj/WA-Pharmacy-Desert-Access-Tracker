@@ -68,8 +68,6 @@ site copy.
 **Known open items:**
 - **The desert count is a range, 176-237 block groups,** until the 474
   REVIEW-bucket pharmacies are resolved (LIMITATIONS.md).
-- **On phones the legend sidebar leaves the map only ~75px wide**
-  (fixed 300px sidebar beside the map). Pre-existing; not yet fixed.
 - **11 newly registered pharmacies** are in `npi_review_queue` and not on
   the map until they're classified, deduplicated and geocoded.
 - **No validation against WA DOH licensing records** - closures and
@@ -1823,3 +1821,28 @@ is now capped at 45% of the viewport and scrolls, with the slider pinned
 (sticky) at its top. Measured after: map 298px at 557x662 and 365px at
 375x812, with the slider at the same position whether or not the notes
 are scrolled.
+
+---
+
+## 2026-10-16 — Map pages on phones: stacked, scrolling layout below 800px
+
+**Problem:** both map pages put a fixed 300px sidebar beside the map, so
+at phone width (375px) the map was ~75px wide.
+
+**Decision:** below 800px wide, the page scrolls instead of being a
+fixed-height app, and stacks: the map (full width, 55vh, at least
+300px), then the slider with its load status and the mode note, then
+the legend/sidebar (the shortage list scrolls within 50vh), then the
+remaining notes. CSS only (`display: contents` on the two wrapper divs
+plus `order`), so both pages keep their shared HTML. Above 800px nothing
+changes.
+
+**Verified locally at 375x812:** the pharmacy and shortage maps both
+render 375x447, with no horizontal scroll and the slider directly under
+the map. On the shortage map the label, list and all 5,311 colors agree
+with the API. Real mouse drags on the phone-width slider land
+correctly (e.g. 2018-02-02 shows 1,414 locations, matching the API). At
+768x1024 (tablet) the layout is stacked too, with the map 753x563. At
+1280x800 the desktop layout is unchanged: map 980x395 with the 300px
+sidebar, the notes panel capped and scrolling, the slider sticky, and
+no page scroll.

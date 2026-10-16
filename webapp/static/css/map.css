@@ -239,3 +239,39 @@ html, body {
   margin-bottom: 12px;
   line-height: 1.45;
 }
+
+/* Phones and narrow windows (DECISIONS.md 2026-10-16): a 300px sidebar
+   beside the map left it ~75px wide on a phone. Below 800px the page
+   scrolls instead of being a fixed-height app, and stacks: map (full
+   width), slider + load status + mode note, legend/sidebar, then the
+   other notes. The wrapper divs use display: contents so their children
+   can be reordered without changing the HTML both pages share. */
+@media (max-width: 800px) {
+  .app { height: auto; min-height: 100vh; padding-bottom: 16px; }
+  .app__body, .controls { display: contents; }
+
+  #map { order: 1; flex: none; width: 100%; height: 55vh; min-height: 300px; }
+
+  #slider-root {
+    order: 2;
+    position: static;
+    padding: 12px 16px 0;
+    border-top: 1px solid var(--border);
+    background: var(--surface-1);
+  }
+  #layer-error { order: 3; margin: 8px 16px 0; }
+  #mode-note { order: 4; margin: 8px 16px 0; }
+
+  .sidebar {
+    order: 5;
+    width: auto;
+    margin-top: 12px;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    overflow: visible;
+  }
+  .shortage-list { max-height: 50vh; }
+
+  .controls > .limitation-note { order: 6; margin: 8px 16px 0; }
+}
