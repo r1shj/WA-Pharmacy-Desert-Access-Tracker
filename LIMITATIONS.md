@@ -343,7 +343,8 @@ A day is lost only if both runs are dropped or fail (an API outage, or a
 safeguard refusing suspicious data). A failed run turns the workflow red,
 and every run, successful or not, is logged in `snapshot_runs`. Missed
 days can't be recovered later - neither openFDA nor NPPES serves past
-states.
+states. The site keeps the data in memory and reloads it every 5 minutes, so a
+new snapshot can take up to 5 minutes to appear after a run.
 
 **What would close this gap:** any push to the repository resets
 GitHub's 60-day clock, and re-enabling the workflow in the Actions tab

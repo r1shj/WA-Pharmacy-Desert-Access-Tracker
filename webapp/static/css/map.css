@@ -140,6 +140,31 @@ html, body {
   line-height: 1.45;
 }
 .limitation-note strong { color: var(--text-primary); }
+.limitation-note:empty { display: none; }
+.limitation-note--error {
+  color: var(--text-primary);
+  border-color: var(--status-desert);
+}
+
+/* Load state for the selected date (set by DateSlider on #slider-root). */
+.date-slider__status {
+  min-height: 18px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+[data-state="error"] .date-slider__status { color: var(--status-desert); font-weight: 600; }
+.date-slider__retry {
+  margin-left: 6px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 8px;
+  cursor: pointer;
+}
 .limitation-note--mode {
   font-weight: 600;
   color: var(--text-primary);

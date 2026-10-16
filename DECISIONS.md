@@ -1491,3 +1491,88 @@ not a broken scan.
 the Census key is still recommended, as advised on Day 1. It was passed
 as a literal command-line argument then, so it exists in the local
 session transcript, though not in any file or commit.
+
+---
+
+## 2026-10-16 — Slider 500s: Supabase's 15-client pooler limit; fixed with a connection pool, caching, and a slider that owns its load cycle
+
+**Symptom (reported from the live site):** dragging either slider produced
+HTTP 500s from `/api/pharmacy/pharmacies`, `/api/shortages/active` and
+`/api/shortages/vulnerability-scores` (18 + 84 console errors in one
+session), then `Unexpected token 'I', "Internal S"... is not valid JSON`.
+On the pharmacy map, the slider read 2026-10-16 while the note under it
+described 2018-09-25.
+
+**Reproduced against the live site:** sequential requests: 28/28 ok.
+8 concurrent: all ok but up to 53s. 24 concurrent: 2 HTTP 500s and 2
+60-second timeouts. 48 concurrent: 16 of 112 failed, on all three date
+endpoints. Every date that failed succeeded when retried alone - **load,
+not a date-specific bug.**
+
+**Root cause:** the Supabase **session pooler admits 15 simultaneous
+clients**. Measured directly: connections 1-15 succeed and the 16th
+gets `FATAL: (EMAXCONNSESSION) max clients reached in session mode`. The
+app opened a new connection for every request. FastAPI runs up to 40 sync
+requests at once, and the slider fired a fetch on every `input` event
+(two per step on the shortage map), so a quick drag blew through 15. The
+unhandled `OperationalError` became FastAPI's plain-text "Internal Server
+Error", and the frontend called `.json()` on it without checking the
+status. Separately, nothing ordered the responses: the pharmacy note and
+points were filled independently by whichever response arrived last.
+That's how a late 2018-09-25 response ended up under 2026-10-16. Render's
+own log traceback wasn't retrieved (no Render API access). The diagnosis
+rests on reproducing the identical error against the same pooler.
+
+**Fix - server (`webapp/main.py`):**
+- **A connection pool of 4** (`DB_POOL_SIZE`). The 15 pooler slots are
+  shared with the daily job, with a second instance during a Render
+  deploy, and with local psql. Requests wait up to 15s for a free
+  connection instead of failing. Connections are autocommit (read-only,
+  no open transactions). A refused or dropped connection is retried once.
+- **Database errors return JSON 503**, and anything else returns JSON
+  500, never plain text. Bad dates get a 422.
+- **In-memory caches.** The shortage table (274 rows) and the pharmacy
+  locations, eligibility and backfill dates reload every 5 minutes, so a
+  new snapshot shows up on the site within 5 minutes of a run. The
+  vulnerability base reloads hourly, the static polygon and border layers
+  every 6 hours. Per-date responses are cached on top, so dragging the
+  slider almost never touches the database. Vulnerability scores depend
+  on the date only through the 0-20 shortage points, so the 5,311-row
+  list is serialized once per points value. If a reload fails, the
+  previous data keeps being served.
+- **Verified identical output:** for 25 dates (2005-2026), the new
+  endpoints return exactly the old ones' data. Static layers match except
+  feature order, which was never defined. With cold caches, 180 date
+  requests from 48 threads against Supabase all succeeded in 3.1s using 2
+  connections. With all 15 pooler slots held, the app retried and
+  returned a JSON 503, then recovered when the slots freed.
+
+**Fix - client (`date-slider.js`, shared by both maps):** the slider now
+owns the whole load cycle, so the rule is enforced once:
+- **The readout date and every date-dependent element always agree.**
+  The moment the date changes, the page clears the old date's points,
+  colors, popups, counts, list and note. `render` only ever receives
+  data for the date in the readout, and each map also checks the
+  response's `as_of_date`. A failure leaves the content cleared and shows
+  "Couldn't load YYYY-MM-DD" with Retry. On the shortage map, both
+  requests must succeed before anything is shown.
+- **Debounced:** while dragging, it fetches only after a 250ms pause,
+  and immediately on release. The previous date's request is aborted, and
+  a late response for an abandoned date is discarded.
+- `fetchJSON` rejects any non-2xx response, so an error body is never
+  parsed as data.
+
+Local results: a 401-event drag across the full pharmacy range sent 1
+request (previously 401). A 301-event shortage drag sent 2 (one per
+endpoint). Content was cleared, never stale, throughout. An injected 500
+showed the error state with nothing left from the previous date, and
+Retry recovered it. A slow response for 2010 overtaken by a fast one for
+2020 showed 2020 only. Every check ended with readout = note date, count
+= markers = API count, and 0 of 5,311 block-group colors mismatched.
+
+**Also:** the three HTML pages now send `Cache-Control: no-cache` (the
+cause of the stale three-color legend: an old cached page paired with the
+new script). The legend code and the layer-error reporting now tolerate
+missing elements, so a stale page still renders the map. Tested by
+loading the shortage page with both elements removed: all 5,311 block
+groups colored, 231 shortages listed, no errors.

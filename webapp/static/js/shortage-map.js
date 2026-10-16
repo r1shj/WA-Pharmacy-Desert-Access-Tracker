@@ -76,8 +76,13 @@ function styleForScore(s) {
 }
 
 // Legend gradient from the same function as the fill, so they can't drift.
-document.getElementById('vulnerability-gradient').style.background =
-  `linear-gradient(to right, ${Array.from({ length: 11 }, (_, i) => colorForScore(i * 10)).join(', ')})`;
+// Guarded: a page from an older deploy (no gradient bar) must not stop the
+// rest of this script and leave the map blank.
+const gradientEl = document.getElementById('vulnerability-gradient');
+if (gradientEl) {
+  gradientEl.style.background =
+    `linear-gradient(to right, ${Array.from({ length: 11 }, (_, i) => colorForScore(i * 10)).join(', ')})`;
+}
 
 function popupHtmlForScore(s) {
   if (s.vulnerability_score_basis === 'partial_income_suppressed') {
@@ -110,9 +115,16 @@ window.addEventListener('resize', () => map.invalidateSize());
 
 const blockGroupLayersByGeoid = {};
 
+function reportLayerError(what) {
+  const message = `Couldn't load ${what}. Reload the page to try again.`;
+  const el = document.getElementById('layer-error');
+  if (!el) { console.warn(message); return; }  // page from an older deploy
+  el.hidden = false;
+  el.textContent = message;
+}
+
 function loadBlockGroupGeometry() {
-  return fetch('/api/shortages/block-group-geometry')
-    .then(r => r.json())
+  return fetchJSON('/api/shortages/block-group-geometry')
     .then(geojson => {
       L.geoJSON(geojson, {
         style: () => DEFAULT_STYLE,
@@ -123,66 +135,82 @@ function loadBlockGroupGeometry() {
     });
 }
 
-function updateVulnerability(date) {
-  fetch(`/api/shortages/vulnerability-scores?date=${date}`)
-    .then(r => r.json())
-    .then(data => {
-      data.scores.forEach(s => {
-        const layer = blockGroupLayersByGeoid[s.geoid];
-        if (!layer) return;
-        layer.setStyle(styleForScore(s));
-        layer.bindPopup(popupHtmlForScore(s));
-      });
-      document.getElementById('shortage-summary').innerHTML = `
-        <strong>${data.active_chronic_shortage_count}</strong> active shortages as of ${data.as_of_date}
-        in the 7 tracked chronic-condition categories -&gt; contributes
-        <strong>${data.shortage_points}/${data.shortage_points_max}</strong> points to every block group's
-        vulnerability score (a single statewide number; shortage data has no
-        sub-state geography, so this cannot vary by location).
-      `;
-    });
+// --- Date-dependent content: choropleth colors and popups, the summary
+// line, the shortage count and list. Both requests must succeed before any
+// of it is shown, and it's loaded, shown and cleared only through
+// DateSlider - so it always matches the date in the slider readout.
+
+function loadShortageDate(dateStr, signal) {
+  return Promise.all([
+    fetchJSON(`/api/shortages/vulnerability-scores?date=${dateStr}`, signal),
+    fetchJSON(`/api/shortages/active?date=${dateStr}`, signal),
+  ]).then(([vulnerability, active]) => ({ vulnerability, active }));
 }
 
-function updateShortageList(date) {
-  fetch(`/api/shortages/active?date=${date}`)
-    .then(r => r.json())
-    .then(data => {
-      document.getElementById('shortage-count').textContent = data.count;
-      const listEl = document.getElementById('shortage-list');
-      listEl.innerHTML = '';
-      data.shortages.forEach(s => {
-        const item = document.createElement('div');
-        item.className = 'shortage-item';
-        const badge = s.counts_toward_vulnerability
-          ? '<span class="chronic-badge" title="Counts toward the vulnerability index\'s shortage component">chronic</span>'
-          : '';
-        // An end date means two different things - never call a feed
-        // dropout "resolved" (see DECISIONS.md 2026-10-15).
-        let duration;
-        if (s.end_date_basis === 'confirmed_resolved') {
-          duration = `resolved ${s.end_date}`;
-        } else if (s.end_date_basis === 'last_observed_in_feed') {
-          duration = `last listed by FDA ${s.end_date} (left the feed - not confirmed resolved)`;
-        } else {
-          duration = `active since ${s.start_date} (open-ended)`;
-        }
-        item.innerHTML = `
-          <div class="shortage-item__name">${s.generic_name}${badge}</div>
-          <div class="shortage-item__meta">${s.therapeutic_category || 'Uncategorized'}</div>
-          <div class="shortage-item__meta">${s.source_status} · ${duration}</div>
-        `;
-        listEl.appendChild(item);
-      });
-    });
+function renderShortageDate({ vulnerability, active }, dateStr) {
+  if (vulnerability.as_of_date !== dateStr || active.as_of_date !== dateStr) {
+    throw new Error(`asked for ${dateStr}, got ${vulnerability.as_of_date} / ${active.as_of_date}`);
+  }
+  vulnerability.scores.forEach(s => {
+    const layer = blockGroupLayersByGeoid[s.geoid];
+    if (!layer) return;
+    layer.setStyle(styleForScore(s));
+    layer.bindPopup(popupHtmlForScore(s));
+  });
+  document.getElementById('shortage-summary').innerHTML = `
+    <strong>${vulnerability.active_chronic_shortage_count}</strong> active shortages as of ${vulnerability.as_of_date}
+    in the 7 tracked chronic-condition categories -&gt; contributes
+    <strong>${vulnerability.shortage_points}/${vulnerability.shortage_points_max}</strong> points to every block group's
+    vulnerability score (a single statewide number; shortage data has no
+    sub-state geography, so this cannot vary by location).
+  `;
+
+  document.getElementById('shortage-count').textContent = active.count;
+  const listEl = document.getElementById('shortage-list');
+  listEl.innerHTML = '';
+  active.shortages.forEach(s => {
+    const item = document.createElement('div');
+    item.className = 'shortage-item';
+    const badge = s.counts_toward_vulnerability
+      ? '<span class="chronic-badge" title="Counts toward the vulnerability index\'s shortage component">chronic</span>'
+      : '';
+    // An end date means two different things - never call a feed
+    // dropout "resolved" (see DECISIONS.md 2026-10-15).
+    let duration;
+    if (s.end_date_basis === 'confirmed_resolved') {
+      duration = `resolved ${s.end_date}`;
+    } else if (s.end_date_basis === 'last_observed_in_feed') {
+      duration = `last listed by FDA ${s.end_date} (left the feed - not confirmed resolved)`;
+    } else {
+      duration = `active since ${s.start_date} (open-ended)`;
+    }
+    item.innerHTML = `
+      <div class="shortage-item__name">${s.generic_name}${badge}</div>
+      <div class="shortage-item__meta">${s.therapeutic_category || 'Uncategorized'}</div>
+      <div class="shortage-item__meta">${s.source_status} · ${duration}</div>
+    `;
+    listEl.appendChild(item);
+  });
+}
+
+function clearShortageDate() {
+  map.closePopup();
+  Object.values(blockGroupLayersByGeoid).forEach(layer => {
+    layer.setStyle(DEFAULT_STYLE);
+    layer.unbindPopup();
+  });
+  document.getElementById('shortage-summary').innerHTML = '';
+  document.getElementById('shortage-count').textContent = '–';
+  document.getElementById('shortage-list').innerHTML = '';
 }
 
 // Geometry must be in place (blockGroupLayersByGeoid populated) before
-// the first updateVulnerability() call, or every setStyle() call finds
-// no matching layer and silently no-ops - sequence explicitly rather
-// than firing both fetches in parallel and hoping the timing works out.
+// the slider's first load, or every setStyle() call finds no matching
+// layer and silently no-ops - sequence explicitly rather than firing both
+// fetches in parallel and hoping the timing works out.
 Promise.all([
   loadBlockGroupGeometry(),
-  fetch('/api/shortages/config').then(r => r.json()),
+  fetchJSON('/api/shortages/config'),
 ]).then(([_, cfg]) => {
   document.getElementById('interval-note').innerHTML = `
     <strong>${cfg.open_ended_count} of ${cfg.total_count} shortages have open-ended, unconfirmed end dates.</strong>
@@ -200,11 +228,8 @@ Promise.all([
     maxDate: cfg.slider_max_date,
     initialDate: cfg.slider_max_date,
     markers: [{ date: cfg.slider_min_date, label: 'Earliest data in this dataset' }],
-    onChange: (dateStr) => {
-      updateVulnerability(dateStr);
-      updateShortageList(dateStr);
-    },
+    load: loadShortageDate,
+    render: renderShortageDate,
+    clear: clearShortageDate,
   });
-  updateVulnerability(cfg.slider_max_date);
-  updateShortageList(cfg.slider_max_date);
-});
+}).catch(() => reportLayerError('the map (block-group shapes or date range), so the date slider is unavailable'));

@@ -55,9 +55,17 @@ function popupHtml(props) {
   return `<div><strong>${props.address_1}, ${props.city}</strong>${headerFlag}${rows}</div>`;
 }
 
+// Static layers (not date-dependent). A failure is reported, never silent.
+function reportLayerError(what) {
+  const message = `Couldn't load ${what}. Reload the page to try again.`;
+  const el = document.getElementById('layer-error');
+  if (!el) { console.warn(message); return; }  // page from an older deploy
+  el.hidden = false;
+  el.textContent = message;
+}
+
 function loadBlockGroups() {
-  fetch('/api/pharmacy/block-groups')
-    .then(r => r.json())
+  fetchJSON('/api/pharmacy/block-groups')
     .then(geojson => {
       L.geoJSON(geojson, {
         style: f => DESERT_STYLE[f.properties.pharmacy_desert_status] || DESERT_STYLE.not_desert,
@@ -73,12 +81,14 @@ function loadBlockGroups() {
           `);
         },
       }).addTo(map);
-    });
+      // Desert polygons must stay under the pharmacy points.
+      if (pharmacyLayer) pharmacyLayer.bringToFront();
+    })
+    .catch(() => reportLayerError('the pharmacy desert layer'));
 }
 
 function loadBorderPharmacies() {
-  fetch('/api/pharmacy/border-pharmacies')
-    .then(r => r.json())
+  fetchJSON('/api/pharmacy/border-pharmacies')
     .then(geojson => {
       L.geoJSON(geojson, {
         pointToLayer: (f, latlng) => L.circleMarker(latlng, {
@@ -96,51 +106,60 @@ function loadBorderPharmacies() {
           `);
         },
       }).addTo(map);
-    });
+    })
+    .catch(() => reportLayerError('the Oregon/Idaho border pharmacies'));
 }
 
-function loadPharmacies(date) {
-  fetch(`/api/pharmacy/pharmacies?date=${date}`)
-    .then(r => r.json())
-    .then(geojson => {
-      if (pharmacyLayer) map.removeLayer(pharmacyLayer);
-      pharmacyLayer = L.geoJSON(geojson, {
-        pointToLayer: (f, latlng) => L.circleMarker(latlng, {
-          radius: f.properties.review_only ? 6 : 5,
-          color: f.properties.review_only ? REVIEW_ONLY_STROKE : CONFIRMED_STROKE,
-          weight: f.properties.review_only ? 2 : 1,
-          dashArray: f.properties.review_only ? '2,2' : null,
-          fillColor: OWNERSHIP_COLORS[f.properties.ownership_category] || OWNERSHIP_COLORS.unknown,
-          fillOpacity: f.properties.review_only ? 0.7 : 0.9,
-        }),
-        onEachFeature: (f, layer) => layer.bindPopup(popupHtml(f.properties)),
-      }).addTo(map);
-      document.getElementById('pharmacy-count').textContent = geojson.features.length;
-      updateModeNote(geojson);
-    });
+// --- Date-dependent content: the points, their count, and the mode note.
+// Loaded, shown and cleared only through DateSlider, so they always match
+// the date in the slider readout.
+
+function loadPharmaciesForDate(dateStr, signal) {
+  return fetchJSON(`/api/pharmacy/pharmacies?date=${dateStr}`, signal);
+}
+
+function renderPharmacies(geojson, dateStr) {
+  if (geojson.as_of_date !== dateStr) {
+    throw new Error(`asked for ${dateStr}, got ${geojson.as_of_date}`);
+  }
+  clearPharmacies();
+  pharmacyLayer = L.geoJSON(geojson, {
+    pointToLayer: (f, latlng) => L.circleMarker(latlng, {
+      radius: f.properties.review_only ? 6 : 5,
+      color: f.properties.review_only ? REVIEW_ONLY_STROKE : CONFIRMED_STROKE,
+      weight: f.properties.review_only ? 2 : 1,
+      dashArray: f.properties.review_only ? '2,2' : null,
+      fillColor: OWNERSHIP_COLORS[f.properties.ownership_category] || OWNERSHIP_COLORS.unknown,
+      fillOpacity: f.properties.review_only ? 0.7 : 0.9,
+    }),
+    onEachFeature: (f, layer) => layer.bindPopup(popupHtml(f.properties)),
+  }).addTo(map);
+  document.getElementById('pharmacy-count').textContent = geojson.features.length;
+  document.getElementById('mode-note').innerHTML = modeNoteHtml(geojson);
+}
+
+function clearPharmacies() {
+  map.closePopup();
+  if (pharmacyLayer) { map.removeLayer(pharmacyLayer); pharmacyLayer = null; }
+  document.getElementById('pharmacy-count').textContent = '–';
+  document.getElementById('mode-note').innerHTML = '';
 }
 
 // Driven by what the API actually used for this date, not re-derived
 // here, so the note can't disagree with the points on the map.
-function updateModeNote(geojson) {
-  const noteEl = document.getElementById('mode-note');
+function modeNoteHtml(geojson) {
   const dateStr = geojson.as_of_date;
-
-  let mode;
   if (geojson.basis === 'observed' && geojson.observed_date === dateStr) {
-    mode = `<span class="limitation-note--mode">Observed snapshot</span> — the federal NPI registry as swept on ${dateStr}, not reconstructed.`;
+    return `<span class="limitation-note--mode">Observed snapshot</span> — the federal NPI registry as swept on ${dateStr}, not reconstructed.`;
   } else if (geojson.basis === 'observed') {
-    mode = `<span class="limitation-note--mode">Most recent observed snapshot (${geojson.observed_date})</span> — the registry wasn't swept on ${dateStr}, so this shows the last real observation before it.`;
-  } else {
-    mode = `<span class="limitation-note--mode">Backfilled estimate</span> — based on when each pharmacy's federal registration (NPI) was first recorded, not a direct observation of ${dateStr}. It can show openings but not closures.`;
+    return `<span class="limitation-note--mode">Most recent observed snapshot (${geojson.observed_date})</span> — the registry wasn't swept on ${dateStr}, so this shows the last real observation before it.`;
   }
-  noteEl.innerHTML = mode;
+  return `<span class="limitation-note--mode">Backfilled estimate</span> — based on when each pharmacy's federal registration (NPI) was first recorded, not a direct observation of ${dateStr}. It can show openings but not closures.`;
 }
 
-fetch('/api/pharmacy/config')
-  .then(r => r.json())
+fetchJSON('/api/pharmacy/config')
   .then(cfg => {
-    const slider = new DateSlider({
+    new DateSlider({
       container: document.getElementById('slider-root'),
       minDate: cfg.slider_min_date,
       maxDate: cfg.slider_max_date,
@@ -149,10 +168,12 @@ fetch('/api/pharmacy/config')
       // observed day would bury the slider within a few weeks.
       markers: [{ date: cfg.last_backfilled_date, label: 'Last backfilled date' }]
         .concat(cfg.first_observed_date ? [{ date: cfg.first_observed_date, label: 'First observed registry snapshot' }] : []),
-      onChange: (dateStr) => loadPharmacies(dateStr),
+      load: loadPharmaciesForDate,
+      render: renderPharmacies,
+      clear: clearPharmacies,
     });
-    loadPharmacies(slider.getValue());
-  });
+  })
+  .catch(() => reportLayerError("the map's date range, so the date slider is unavailable"));
 
 loadBlockGroups();
 loadBorderPharmacies();
