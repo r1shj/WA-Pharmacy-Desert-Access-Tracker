@@ -65,8 +65,9 @@ for r in rows:
             npi, organization_name, dba_name, parent_organization, ownership_category,
             ownership_confidence, classification_method, primary_taxonomy_code, primary_taxonomy_desc,
             pharmacy_type, walk_in_access, included_in_access_analysis, exclusion_reason,
-            physical_location_id, enumeration_date, last_updated, source_name, retrieved_at
-        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            physical_location_id, enumeration_date, last_updated, source_name, retrieved_at,
+            shared_signer_npi_count
+        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
     """, (
         r["npi"], r["organization_name"], none_if_blank(r["other_names"]), none_if_blank(r["parent_organization"]),
         r["ownership_category"], none_if_blank(r["ownership_confidence"]), r["classification_method"],
@@ -75,6 +76,7 @@ for r in rows:
         none_if_blank(r["exclusion_reason"]), r["physical_location_id"],
         enum["enumeration_date"] if enum else None, enum["last_updated"] if enum else None,
         "NPPES", RETRIEVED_AT,
+        int(r["shared_signer_npi_count"]) if r.get("shared_signer_npi_count") else None,
     ))
 print(f"pharmacies: loaded {len(rows)} rows ({missing_enum} missing an enumeration_date join)")
 

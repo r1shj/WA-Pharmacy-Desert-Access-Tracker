@@ -1,4 +1,4 @@
-# Washington Pharmacy Access & Shortage Tracker
+# Washington Pharmacy Access & National Shortage Context
 
 **Live site: https://wa-pharmacy-desert-access-tracker.onrender.com**
 
@@ -205,7 +205,8 @@ shortage = min(20, round(20 × active chronic-condition shortages / 150))
   colored by three bands (low ≤33, medium ≤66, high), but with access and
   income each worth 0 or 40, scores fell only in 0-20, 40-60 or 80-100. The
   band cutoffs sit in the gaps, so **the three-band coloring could never
-  respond to shortage changes**, and "high" was exactly the 237 deserts. On
+  respond to shortage changes**, and "high" was exactly the desert block groups,
+  237 (the upper end of a 176-237 range). On
   the continuous scale, the shortage term visibly lightens or darkens the
   map as the slider moves. Bands remain as labels in the popups.
 

@@ -63,9 +63,19 @@ job is disabled.
 policy brief (`policy_brief.md` / `.docx`), and a consistency pass on the
 site copy.
 
-**Next:** **Day 11 - final audit.**
+**Day 11 - final audit (2026-10-16):** the audit was run and its fixes
+are applied: no individuals' names in the app or in tracked files, the
+176-237 range on every page, national-context wording. What's left is
+the owner decisions below.
 
 **Known open items:**
+- **Owner decisions pending:**
+  - whether to rewrite git history to purge individuals' names (they're
+    in the initial commit) - see the Day 11 fixes entry for what it
+    involves;
+  - whether to remove two individual-name legal names from four committed
+    CSVs;
+  - which LICENSE to add (none yet).
 - **The desert count is a range, 176-237 block groups,** until the 474
   REVIEW-bucket pharmacies are resolved (LIMITATIONS.md).
 - **11 newly registered pharmacies** are in `npi_review_queue` and not on
@@ -1892,3 +1902,99 @@ geographic pattern comes entirely from the desert classification's
 access and income measures. Previously the README said so only in
 Methodology, and the landing page said "access and income" without tying
 it to the desert classification.
+
+---
+
+## 2026-10-16 — Day 11 fixes: no individuals' names in the app or in tracked files; range on the landing page; national-context wording
+
+**1. Officer names removed from the ownership output and the live
+popups.** The officer-repetition fallback labelled 124 pharmacies
+"Unidentified chain (shared authorized official: FIRST LAST, N
+locations)", naming 28 individuals on the live site. It now says
+**"Likely chain: several locations share a registered signer"**. The
+signal is kept as `classification_method = authorized_official_repetition`
+plus a new `shared_signer_npi_count` (group sizes: 17 groups of 3, 6 of 4,
+2 of 5, 1 each of 7, 9 and 23). Names are used only to group NPIs inside
+`day3/classify_ownership.py` and are never written out.
+- **Proof the code and the files agree:** re-running the updated
+  generator and dedup step reproduced the patched day3 CSVs byte for byte.
+- **Databases:** Supabase and the local database were migrated with
+  `day11/remove_personal_names.sql`, which checks itself: 124 rows
+  relabelled, 0 names left, 0 mismatches with the CSV. The schema and both
+  load scripts carry the new column.
+- **A second case found while verifying:** two pharmacies are registered
+  in NPPES with an individual's name as the legal `organization_name`.
+  It equals the record's authorized official. They're flagged
+  `organization_name_is_individual` by NPI, and the API shows their trading
+  name (DBA) instead. Their legal names remain in four committed CSVs
+  (`day2/wa_pharmacies_classified.csv`, `day2/wa_pharmacies_final.csv`
+  and both day3 CSVs) as NPPES source data. Removing them is the owner's
+  call.
+- **Verified:** every endpoint (5 static, plus the 3 date endpoints at 4
+  dates) and every page and script was scanned. Matched against 731
+  authorized officials' names and 4,214 phone/fax numbers from the raw
+  NPPES pulls, plus the word "official": 0 of 23 had any match. The same
+  matcher found 31 names in the old committed CSV (positive control). One
+  remaining substring match, in a taxonomy description, is junk NPPES
+  data ("MANAGED CARE" entered as an official's name), not a person.
+
+**2. Personal-data files untracked, not deleted.**
+`day2/wa_pharmacies_full_flat.csv` (1,200 officials' names and phone
+numbers), `nppes_sample_flat.csv` and `nppes_sample_raw.json` (officials'
+names, titles, credentials, phone and fax numbers) are removed from
+tracking with `git rm --cached`. They're added to `.gitignore` and kept
+locally. This reverses the 2026-10-15 choice to keep the Day 1 samples.
+The day3 CSVs had no separate name or phone columns; the names were inside
+`parent_organization`, now relabelled (above).
+
+**History was NOT rewritten - what it would take, for the owner to decide.**
+The names remain in git history: the three files and the old day3 CSVs
+were all added in the initial commit (`50fed2e`). Any clone of the public
+repository, and GitHub's own copy, still has them.
+
+*What a rewrite involves:*
+1. A fresh clone, then `git filter-repo`:
+   - `--invert-paths` on the three files;
+   - plus `--replace-text` (or a blob callback) to replace the officer-name
+     labels in every historical version of the two day3 CSVs.
+2. Re-scan every blob in the rewritten history (the 2026-10-16 audit
+   scanner) to confirm zero names.
+3. Re-add the remote and `git push --force-with-lease origin main`.
+4. Ask GitHub Support to purge cached views and garbage-collect. Until
+   then, old commits stay viewable by their SHA.
+5. Replace every local working copy with a fresh clone.
+
+*Risks:*
+- **Every commit hash changes,** all of them, because the initial commit
+  is rewritten. Hashes cited in DECISIONS.md (e.g. `7431264`, `25a103e`,
+  `32e9549`, `c965c0c`, `e64ae4b`, `a994189`, `3550526`, `463b999`) go
+  stale. filter-repo writes a commit map that could be used to update
+  them.
+- **The force push rewrites public history.** Forks and existing clones
+  keep the old history and can't be recalled.
+- **Render** auto-deploys the new HEAD (same content, a brief redeploy and
+  cold start); its deploy history keeps the old SHAs. **GitHub Actions**
+  run history also references old SHAs. The schedule itself is
+  unaffected.
+- **Limited benefit:** this is public NPPES data, and the repository has
+  been public since 2026-10-15. A rewrite reduces future casual exposure;
+  it can't guarantee removal.
+
+**3. Desert range everywhere.**
+- **Landing page:** the "Pharmacy deserts" step now states "Between 176
+  and 237 of Washington's 5,311 block groups are deserts", with what each
+  end means. These are classification outputs, not live counts, so the
+  earlier no-live-numbers rule still holds.
+- **The standalone mentions now read "237 (the upper end of a 176-237
+  range)":** the README methodology, the policy brief (.md and .docx,
+  still one page), and the same sentence in LIMITATIONS.md.
+
+**4. Wording.**
+- The shortage sidebar heading is now "Active national shortages (N)".
+- The summary line says "a single national number, the same for every
+  block group" instead of "a single statewide number". The same phrase
+  was fixed in the brief and LIMITATIONS.md.
+- The site title is now "Washington Pharmacy Access & National Shortage
+  Context": landing `<title>` and `<h1>`, README heading, FastAPI title.
+  The GitHub repository description is empty, and the resume bullets
+  never used the title.

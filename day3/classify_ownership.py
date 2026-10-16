@@ -40,6 +40,7 @@ DAY2_DIR = os.path.join(OUT_DIR, "..", "day2")
 # signal, consistent with the Day 1 example (one official across 15+
 # Albertsons-family locations). See DECISIONS.md.
 AUTH_OFFICIAL_CHAIN_THRESHOLD = 3
+SHARED_SIGNER_LABEL = "Likely chain: several locations share a registered signer"
 
 
 def normalize_text(org_name, dba):
@@ -130,27 +131,31 @@ if __name__ == "__main__":
             if official != ("", ""):
                 unmatched_official[official].append(row["npi"])
 
-    # Pass 2: apply the authorized-official repetition fallback.
-    final_results = dict(name_results)
+    # Pass 2: apply the authorized-official repetition fallback. The
+    # signer's name is used only to group NPIs here and is never written
+    # out (DECISIONS.md 2026-10-16) - the output keeps a generic label and
+    # the group size.
+    final_results = {npi: r + ("",) for npi, r in name_results.items()}
     for official, npis in unmatched_official.items():
         if len(npis) >= AUTH_OFFICIAL_CHAIN_THRESHOLD:
-            first, last = official
             for npi in npis:
                 final_results[npi] = (
                     "chain",
-                    f"Unidentified chain (shared authorized official: {first} {last}, {len(npis)} locations)",
+                    SHARED_SIGNER_LABEL,
                     "medium",
                     "authorized_official_repetition",
+                    len(npis),
                 )
 
     # Anything still unclassified stays unknown.
     for row in scope_rows:
         if row["npi"] not in final_results:
-            final_results[row["npi"]] = ("unknown", "", "n/a", "no_match")
+            final_results[row["npi"]] = ("unknown", "", "n/a", "no_match", "")
 
     out_path = os.path.join(OUT_DIR, "wa_pharmacies_ownership.csv")
     fieldnames = list(final_rows[0].keys()) + [
         "ownership_category", "parent_organization", "ownership_confidence", "classification_method",
+        "shared_signer_npi_count",
     ]
     category_counts = Counter()
     method_counts = Counter()
@@ -160,13 +165,14 @@ if __name__ == "__main__":
         for row in final_rows:
             out_row = dict(row)
             if row["npi"] in final_results:
-                category, parent, confidence, method = final_results[row["npi"]]
+                category, parent, confidence, method, signer_count = final_results[row["npi"]]
             else:
-                category, parent, confidence, method = ("not_applicable", "", "n/a", "excluded_from_scope")
+                category, parent, confidence, method, signer_count = ("not_applicable", "", "n/a", "excluded_from_scope", "")
             out_row["ownership_category"] = category
             out_row["parent_organization"] = parent
             out_row["ownership_confidence"] = confidence
             out_row["classification_method"] = method
+            out_row["shared_signer_npi_count"] = signer_count
             category_counts[category] += 1
             method_counts[method] += 1
             writer.writerow(out_row)

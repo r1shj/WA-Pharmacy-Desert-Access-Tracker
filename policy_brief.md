@@ -6,7 +6,7 @@
 
 - **237 of Washington's 5,311 census block groups (346,334 residents) are pharmacy deserts**: low-income *and* more than 1 mile (urban) or 10 miles (rural) from a pharmacy. Counting 447 pharmacy locations whose walk-in status is still unconfirmed would lower that to **176 block groups (about 255,000 residents)**. The true figure lies in that range.
 - **Most desert residents live in metro counties.** King, Pierce, Clark and Snohomish hold 64% of them. The highest *shares* are in small rural counties, and the longest distances are in rural Lewis, Pend Oreille and Stevens counties (19-33 straight-line miles).
-- **The vulnerability index adds no geographic information beyond access and income.** Its national shortage component is one statewide number.
+- **The vulnerability index adds no geographic information beyond access and income.** Its shortage component is one national number, the same for every block group.
 
 **How "desert" is measured.** Distance runs from each block group's 2020 Census population-weighted center to the nearest confirmed walk-in pharmacy, counting Oregon and Idaho pharmacies within 20 miles of the border. It is straight-line distance, meaning geographic proximity, not travel time. "Low income" means a tract's median household income is below 80% of a county median we computed from ACS data. That's a proxy for HUD's area median income, not HUD's published figure.
 
@@ -33,7 +33,7 @@
 **Vulnerability index.**
 
 - **How it's built:** 40 points for low access, 40 for low income, and up to 20 for national shortages. Today 103 shortages are active in 7 chronic-condition categories, worth 14 points, the same in every block group.
-- **What it shows:** its "high" band is exactly the 237 deserts. The medium band (2,498 block groups) is low-access-only (1,212) or low-income-only (1,286). County rankings by vulnerability therefore match the desert rankings above.
+- **What it shows:** its "high" band is exactly the desert block groups: 237 (the upper end of a 176-237 range). The medium band (2,498 block groups) is low-access-only (1,212) or low-income-only (1,286). County rankings by vulnerability therefore match the desert rankings above.
 - **What it doesn't show:** whether any medicine is unavailable in Washington. FDA shortages are national, and no public source reports pharmacy-level stock.
 
 **Pharmacy growth (growth only).**

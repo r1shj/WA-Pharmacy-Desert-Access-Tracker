@@ -161,7 +161,7 @@ function renderShortageDate({ vulnerability, active }, dateStr) {
     <strong>${vulnerability.active_chronic_shortage_count}</strong> active shortages as of ${vulnerability.as_of_date}
     in the 7 tracked chronic-condition categories -&gt; contributes
     <strong>${vulnerability.shortage_points}/${vulnerability.shortage_points_max}</strong> points to every block group's
-    vulnerability score (a single statewide number; shortage data has no
+    vulnerability score (a single national number, the same for every block group; shortage data has no
     sub-state geography, so this cannot vary by location).
   `;
 

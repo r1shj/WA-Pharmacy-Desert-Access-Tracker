@@ -76,3 +76,11 @@ day4/geocode_test_output.csv
 day8_prep/snapshots/
 day8_prep/snapshot_log.txt
 *.log
+
+# --- Individuals' names and phone numbers (DECISIONS.md 2026-10-16) ---
+# Public NPPES data, but these files carry authorized officials' names,
+# titles and phone numbers that nothing in the app needs. Kept locally;
+# regenerate with explore_sources.py / day2 pull scripts if required.
+day2/wa_pharmacies_full_flat.csv
+nppes_sample_flat.csv
+nppes_sample_raw.json

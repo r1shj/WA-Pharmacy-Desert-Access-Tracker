@@ -44,6 +44,7 @@ CREATE TABLE pharmacies (
     ownership_category              TEXT,
     ownership_confidence            TEXT,
     classification_method           TEXT,                 -- extra: how ownership_category was determined
+    shared_signer_npi_count         INTEGER,              -- NPIs sharing one registered signer (repetition fallback); the signer's name is never stored
     primary_taxonomy_code           TEXT,                 -- extra
     primary_taxonomy_desc           TEXT,                 -- extra
     pharmacy_type                   TEXT,

@@ -43,7 +43,7 @@ class RevalidatingStaticFiles(StaticFiles):
         return response
 
 
-app = FastAPI(title="Pharmacy Access & Shortage Tracker")
+app = FastAPI(title="Washington Pharmacy Access & National Shortage Context")
 app.mount("/static", RevalidatingStaticFiles(directory=os.path.join(APP_DIR, "static")), name="static")
 
 
@@ -257,9 +257,14 @@ def _load_pharmacy_data():
     # Same eligibility as before: confirmed-included OR still in the REVIEW
     # bucket (walk_in_access='unknown'). Excluded-only locations never show.
     pharmacies_by_location = {}
+    # A few pharmacies are legally registered under an individual's name;
+    # show their trading name (DBA) instead (DECISIONS.md 2026-10-16).
     for r in query("""
-        SELECT physical_location_id, npi, organization_name, dba_name, ownership_category,
-               parent_organization, pharmacy_type, included_in_access_analysis, walk_in_access
+        SELECT physical_location_id, npi,
+               CASE WHEN organization_name_is_individual THEN dba_name ELSE organization_name END AS organization_name,
+               CASE WHEN organization_name_is_individual THEN NULL ELSE dba_name END AS dba_name,
+               ownership_category, parent_organization, pharmacy_type,
+               included_in_access_analysis, walk_in_access
         FROM pharmacies
         WHERE included_in_access_analysis = TRUE OR walk_in_access = 'unknown'
         ORDER BY npi

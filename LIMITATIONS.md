@@ -360,13 +360,14 @@ low/medium/high band, and **no block group ever changed color as the
 shortage slider moved** (found while testing the live site). Access and
 income are each worth 0 or 40, so before shortages every complete score
 is 0, 40 or 80. Shortage points add at most 20, and the band cutoffs at
-33 and 66 fall in the gaps. "High" was exactly the 237 pharmacy deserts.
+33 and 66 fall in the gaps. "High" was exactly the pharmacy deserts: 237
+(the upper end of a 176-237 range).
 **Fixed** by coloring on the continuous 0-100 score instead (DECISIONS.md
 2026-10-16): the shade now moves with the slider. For example, the
 lightest group goes from `#d4e5f9` at 1 shortage point (2017-10-28) to
 `#b4d2f5` at 14 points (2026-10-16).
 
-**What's still true:** shortage points are one statewide number, so they
+**What's still true:** shortage points are one national number, so they
 darken or lighten *every* block group by the same amount. The map's
 spatial pattern - which places look more vulnerable than others - comes
 entirely from access and income, and the shortage factor moves shades by
