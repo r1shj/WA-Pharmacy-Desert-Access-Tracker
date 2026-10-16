@@ -26,11 +26,12 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 18,
 }).addTo(map);
 
-// Leaflet reads its container's size at init time; inside a flex layout
-// that size isn't always resolved yet on first paint.
-window.addEventListener('load', () => map.invalidateSize());
-setTimeout(() => map.invalidateSize(), 150);
-window.addEventListener('resize', () => map.invalidateSize());
+// Keep Leaflet's idea of the map size in sync with its container. Leaflet
+// measures once at init, but the container's height changes afterwards -
+// the slider, notes and counts below the map fill in as data loads, and
+// the window can resize - and a stale size left the map off-center and
+// stopped popups auto-panning into view (DECISIONS.md 2026-10-16).
+new ResizeObserver(() => map.invalidateSize()).observe(document.getElementById('map'));
 
 let pharmacyLayer = null;
 
