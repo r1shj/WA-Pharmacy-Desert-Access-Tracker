@@ -141,6 +141,10 @@ html, body {
 }
 .limitation-note strong { color: var(--text-primary); }
 .limitation-note:empty { display: none; }
+/* The mode note is cleared while a date loads and varies in length by
+   mode; reserve room for its longest form so the slider above it doesn't
+   jump under the cursor between drags. */
+#mode-note, #mode-note:empty { display: block; min-height: calc(3 * 1.45em + 18px); }
 .limitation-note--error {
   color: var(--text-primary);
   border-color: var(--status-desert);
