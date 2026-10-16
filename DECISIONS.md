@@ -19,8 +19,8 @@ landing page plus `/map/pharmacy` and `/map/shortages`.
 **What's deployed:**
 - **Web app (`webapp/`)** on Render's free tier. It auto-deploys from
   `main` when files under `webapp/` change, because Render's root
-  directory is `webapp/`. The last such change, `7431264`, has been live
-  since 2026-10-16 19:05 UTC. Commits that only touch docs, `jobs/` or
+  directory is `webapp/`. The latest such change, the Day 10 copy and
+  layout pass, went live on 2026-10-16. Commits that only touch docs, `jobs/` or
   the workflow don't redeploy. The instance sleeps after 15 idle
   minutes, so the first visit after that takes about a minute.
 - **Database:** Supabase Postgres + PostGIS, reached through its
@@ -59,13 +59,17 @@ job is disabled.
    caching, load-safe slider), no-cache pages, and a full-history
    secret scan with no findings.
 
-**Next:**
-- **Day 10 - documentation:** the README, including future work - email
-  alerts for newly posted national shortages, and why there's no local
-  inventory data.
-- **Day 11 - final audit.**
+**Day 10 - documentation (done 2026-10-16):** README.md, a one-page
+policy brief (`policy_brief.md` / `.docx`), and a consistency pass on the
+site copy.
+
+**Next:** **Day 11 - final audit.**
 
 **Known open items:**
+- **The desert count is a range, 176-237 block groups,** until the 474
+  REVIEW-bucket pharmacies are resolved (LIMITATIONS.md).
+- **On phones the legend sidebar leaves the map only ~75px wide**
+  (fixed 300px sidebar beside the map). Pre-existing; not yet fixed.
 - **11 newly registered pharmacies** are in `npi_review_queue` and not on
   the map until they're classified, deduplicated and geocoded.
 - **No validation against WA DOH licensing records** - closures and
@@ -1731,3 +1735,91 @@ host's 512 MB), refreshed every 5 minutes and backed by a 4-connection
 database pool kept under Supabase's 15-connection limit, so dragging a
 slider never overloads the database and new daily data appears on the
 site within 5 minutes.
+
+---
+
+## 2026-10-16 — Desert count reported as a range (176-237) because REVIEW-bucket pharmacies aren't counted in distances
+
+**Finding (while pulling numbers for the Day 10 README):** the Day 6
+nearest-pharmacy search counts only locations with a confirmed walk-in
+pharmacy (`desert_classification_config.json`,
+`nearest_pharmacy_search`). That was the conservative choice, but its
+effect was never measured. Measured now against Supabase: 61 of the 237
+desert block groups (91,478 residents) are within their urban or rural
+threshold of one of the 447 geocoded REVIEW-only locations. Counting
+REVIEW locations can only shorten distances, so the desert count under
+this method lies between **176 and 237** block groups (254,856 to
+346,334 residents).
+
+**Decision:** keep 237 as the published classification, because it is
+what the pre-registered method produces and REVIEW status is genuinely
+unresolved. But report it everywhere with the range and the reason
+(README, policy brief, LIMITATIONS.md), never as a bare point estimate.
+Rankings in the policy brief flag which deserts are review-sensitive. No
+change to the classification code: resolving the REVIEW bucket is the
+real fix, not counting unconfirmed pharmacies by fiat.
+
+**Evidence:** PostGIS `ST_DWithin` between each desert block group's
+CenPop centroid and every REVIEW-only location (geography, threshold
+1 mi urban / 10 mi rural). 413 of the 474 REVIEW NPIs carry the generic
+"Pharmacy" taxonomy (`pharmacy_type = unspecified`). By county, the
+review-sensitive deserts are concentrated in King (25 of 78), Pierce
+(10 of 33), Snohomish (10 of 15) and Clark (9 of 16).
+
+---
+
+## 2026-10-16 — Day 10 documentation: README, policy brief, and a copy consistency pass
+
+**README.md** is written for two readers: a recruiter in the first
+paragraph, and a skeptical methodologist further down. Every number comes
+from a query against Supabase or from these docs, not from memory.
+Nothing external is cited as a population comparison. The ~450,000
+figure from the Day 6 plausibility check was never sourced, so it's left
+out. The Related Work section describes the WSU "Pharmacy care in rural
+Washington" ArcGIS web map from its own item metadata and layer data:
+86 rural towns with a 2019 population, the miles to the nearest pharmacy
+(10.2-27.7) and that pharmacy's name, some across the Oregon border; plus
+hospitals, rotation sites, MUA/MUP areas and rural counties. The web
+map's owner field is a personal email address and is deliberately not
+reproduced.
+
+**policy_brief.md / .docx:** one page. County and block-group rankings
+carry a "review-sensitive" flag (see the 176-237 entry above). Skamania's
+top share, for instance, rests on 2 block groups that are both
+review-sensitive. Growth is framed as "today's locations by
+first-registration year": the dataset only contains NPIs active in 2026,
+so a per-year count is not openings that year. No local-shortage or
+ownership-burden claims. The .docx is generated directly as
+WordprocessingML (no pandoc or python-docx available, and macOS
+`textutil` flattened the table). It is validated as well-formed and
+rendered to confirm it fits one page.
+
+**Consistency pass (site copy vs. README):**
+- Landing page: ownership listed as "(chain, health system, independent)"
+  -> now names government/tribal, says independent only with positive
+  evidence, otherwise unknown. Deserts step now says straight-line,
+  confirmed walk-in, and geographic proximity not travel time. Shortage
+  step says the shortage term is one national number. The timeline gives
+  the 2026-07-18 observed start. "Checked every day" -> "twice a day". A
+  "Some deserts may not be" limitation was added. The footer lists Urban
+  Areas.
+- Pharmacy map: the growth-only note said "Before October 2026"; it now
+  says before 2026-07-18, notes the undercount from closed-and-deactivated
+  pharmacies, and that an inactive NPI isn't proof of closure. The 2006
+  note said "roughly half … in a few months"; it now gives the measured
+  49% / 80% May-August. A new note says desert status is straight-line
+  proximity to confirmed walk-in pharmacies, the income cutoff is a proxy,
+  and REVIEW locations aren't counted. The REVIEW legend label says "not
+  counted in desert status".
+- Both maps: block-group popups said "Nearest pharmacy: X mi"; they now
+  say "nearest confirmed walk-in pharmacy … (straight line)". The figure
+  never included REVIEW locations, so the old label invited "but there's
+  a pharmacy right there."
+
+**Layout fix found during the pass:** at a 557x662 window the notes
+panel took 625px and the pharmacy map's height was **0**. Even before
+the new note, small windows left the map ~130px tall. The notes panel
+is now capped at 45% of the viewport and scrolls, with the slider pinned
+(sticky) at its top. Measured after: map 298px at 557x662 and 365px at
+375x812, with the slider at the same position whether or not the notes
+are scrolled.

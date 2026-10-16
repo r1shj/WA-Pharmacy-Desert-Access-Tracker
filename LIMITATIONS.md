@@ -234,9 +234,10 @@ geocoding steps.
 ## The pharmacy desert "low income" cutoff uses a self-computed proxy, not HUD's official income limits
 
 **What this tool actually checks:** a tract counts as low-income if its
-median household income is below 80% of its county's Area Median Income
-(AMI) - the same 80%-of-AMI rule HUD uses across federal
-housing/community-development programs.
+median household income (ACS 2022 5-year) is below 80% of its county's
+Area Median Income (AMI) - the same 80%-of-AMI rule HUD uses across
+federal housing/community-development programs. Income is classified at
+the tract level; each block group takes its parent tract's status.
 
 **Why not the real HUD figures:** we tried to fetch HUD's official
 published county AMI data directly and could not get a working download
@@ -378,3 +379,32 @@ from the color choice.
 no public source provides (see the "doesn't know what's in stock" notes),
 or re-weighting so shortage points can cross a band boundary. Either is a
 methodology change to register in DECISIONS.md first.
+
+---
+
+## The desert count depends on review-bucket pharmacies that aren't counted yet: 176 to 237 block groups
+
+**What this tool actually checks:** distance to the nearest pharmacy
+counts only locations with at least one pharmacy confirmed as walk-in
+(`included_in_access_analysis = TRUE`): 1,177 WA locations plus 334
+geocoded OR/ID border locations. The 447 geocoded WA locations whose
+pharmacies are all still in the REVIEW bucket (walk-in status unknown)
+are shown on the map with a warning outline, but they are **not** used
+when measuring distance.
+
+**What this means concretely:** measured 2026-10-16, **61 of the 237
+desert block groups (91,478 of 346,334 residents) lie within their
+1-mile or 10-mile threshold of a REVIEW-only location.** If those
+locations turn out to be walk-in pharmacies, those 61 block groups are
+not deserts. Counting REVIEW locations can only shorten distances, so
+under this method **the desert count is somewhere between 176 and 237
+block groups (about 255,000 to 346,000 residents)**. 237 is the
+conservative upper end. Most REVIEW records carry NPPES's generic
+"Pharmacy" taxonomy code (413 of 474), which includes real grocery-store
+pharmacies (e.g. Haggen stores), so the true figure is plausibly below
+237. The 176 block groups not near any REVIEW location are robust to
+this question.
+
+**What would actually close this gap:** resolving the REVIEW bucket -
+confirming walk-in status for those 474 records (store type, hours,
+DBA) - then recomputing distances.
