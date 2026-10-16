@@ -158,7 +158,7 @@ npi,organization_name,other_names,address_1,city,postal_code,primary_taxonomy_co
 1588026785,ALEXANDRIA DRUGS LLC,GLOBAL PHARMACY,25680 104TH AVE SE,KENT,980307610,3336C0003X,"Pharmacy, Community/Retail Pharmacy",community_retail,yes,True,
 1952857914,ALEXANDRIA DRUGS LLC,GLOBAL PHARMACY,25680 104TH AVE SE,KENT,980307610,3336C0003X,"Pharmacy, Community/Retail Pharmacy",community_retail,yes,True,
 1275089229,ALEXANDRIA DRUGS LLC,SENIOR CARE GLOBAL,25680 104TH AVE SE,KENT,980307610,3336L0003X,"Pharmacy, Long Term Care Pharmacy",long_term_care,no,False,"closed-door pharmacy serving facility residents, not the general public"
-1649333105,ALLEN KAYLER,ULRICH DRUG,27 N MAIN ST,OMAK,988410513,3336C0003X,"Pharmacy, Community/Retail Pharmacy",community_retail,yes,True,
+1649333105,ULRICH DRUG,ULRICH DRUG,27 N MAIN ST,OMAK,988410513,3336C0003X,"Pharmacy, Community/Retail Pharmacy",community_retail,yes,True,
 1033755731,"ALTO PHARMACY, LLC",ALTO PHARMACY,2821 NORTHUP WAY STE 150,BELLEVUE,980041439,3336C0003X,"Pharmacy, Community/Retail Pharmacy",community_retail,yes,True,
 1700048972,AMC MADIGAN-FT LEWIS,JBLM MCCHORD CLINIC PHARMACY,690 BARNES BLVD,JOINT BASE LEWIS MCCHORD,984381303,332000000X,MilitaryU.S. Coast Guard Pharmacy,military,no,False,"restricted to military beneficiaries, not general population"
 1770997124,AMC MADIGAN-FT LEWIS,DOD MONTEREY PHARMACY,473 CABRILLO ST BLDG 422,MONTEREY,939443201,332000000X,MilitaryU.S. Coast Guard Pharmacy,military,no,False,"restricted to military beneficiaries, not general population"
@@ -270,7 +270,7 @@ npi,organization_name,other_names,address_1,city,postal_code,primary_taxonomy_co
 1992856629,CHESTERFIELD PHARMACY,,2301 E UNION ST,SEATTLE,981222957,3336C0003X,"Pharmacy, Community/Retail Pharmacy",community_retail,yes,True,
 1962730150,CHESTERFIELD PHARMACY,,703 COLUMBIA ST,SEATTLE,981041965,3336C0003X,"Pharmacy, Community/Retail Pharmacy",community_retail,yes,True,
 1063432508,CHINOOK PHARMACY INC,CHINOOK PHARMACY,11 S FORKS AVE,FORKS,983319006,3336C0003X,"Pharmacy, Community/Retail Pharmacy",community_retail,yes,True,
-1760594675,CHRISELDA GAMINO,MEDICINE SHOPPE,1121 W COURT ST,PASCO,993014158,3336C0003X,"Pharmacy, Community/Retail Pharmacy",community_retail,yes,True,
+1760594675,MEDICINE SHOPPE,MEDICINE SHOPPE,1121 W COURT ST,PASCO,993014158,3336C0003X,"Pharmacy, Community/Retail Pharmacy",community_retail,yes,True,
 1003980533,CHUCKS DRUG,CHUCKS UNITED DRUGS,787 MAIN ST,BUCKLEY,983218509,3336C0003X,"Pharmacy, Community/Retail Pharmacy",community_retail,yes,True,
 1972659233,CHUNG PHARMACY INC,CHUNG PHARMACY,9122 S TACOMA WAY STE 104,TACOMA,984994406,3336C0003X,"Pharmacy, Community/Retail Pharmacy",community_retail,yes,True,
 1649271214,CITY CENTER DRUG INC,CITY CENTER DRUG,108 E WISHKAH ST,ABERDEEN,985206508,3336C0003X,"Pharmacy, Community/Retail Pharmacy",community_retail,yes,True,

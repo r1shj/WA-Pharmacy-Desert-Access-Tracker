@@ -48,6 +48,23 @@ NON_PHARMACY_FALSE_POSITIVES = {
 MISCODED_RETAIL_NAME_MARKERS = ["BARTELL"]
 
 
+def output_organization_name(record):
+    """The organization name written to the CSVs. NPPES's legal
+    organization_name, unless it is the record's own authorized official's
+    personal name (a pharmacy registered under an individual's name) - then
+    the trading name (first DBA) instead, matching what the site shows
+    (DECISIONS.md 2026-10-16). Classification still runs on the raw record."""
+    basic = record.get("basic", {})
+    legal = (basic.get("organization_name") or "").strip()
+    official = " ".join(filter(None, [(basic.get("authorized_official_first_name") or "").strip(),
+                                      (basic.get("authorized_official_last_name") or "").strip()]))
+    other_names = record.get("other_names") or []
+    dba = (other_names[0].get("organization_name") or "").strip() if other_names else ""
+    if official and dba and legal.upper() == official.upper():
+        return dba
+    return basic.get("organization_name")
+
+
 def classify(record):
     basic = record.get("basic", {})
     org_name = (basic.get("organization_name") or "").upper()
@@ -124,7 +141,7 @@ if __name__ == "__main__":
 
             writer.writerow({
                 "npi": r.get("number"),
-                "organization_name": basic.get("organization_name"),
+                "organization_name": output_organization_name(r),
                 "other_names": dba,
                 "address_1": location.get("address_1"),
                 "city": location.get("city"),

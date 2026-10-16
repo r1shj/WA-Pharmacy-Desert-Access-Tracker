@@ -69,13 +69,12 @@ are applied: no individuals' names in the app or in tracked files, the
 the owner decisions below.
 
 **Known open items:**
-- **Owner decisions pending:**
-  - whether to rewrite git history to purge individuals' names (they're
-    in the initial commit) - see the Day 11 fixes entry for what it
-    involves;
-  - whether to remove two individual-name legal names from four committed
-    CSVs;
-  - which LICENSE to add (none yet).
+- **Owner decision pending:** whether to rewrite git history to purge
+  individuals' names, which are still in the initial commit. See the
+  Day 11 fixes entry for what it involves. The current tree has none.
+- **`day2/wa_pharmacies_classified.csv` predates the 2026-07-18
+  classification fix:** 13 rows would change if regenerated. Not used
+  downstream.
 - **The desert count is a range, 176-237 block groups,** until the 474
   REVIEW-bucket pharmacies are resolved (LIMITATIONS.md).
 - **11 newly registered pharmacies** are in `npi_review_queue` and not on
@@ -1998,3 +1997,49 @@ repository, and GitHub's own copy, still has them.
   Context": landing `<title>` and `<h1>`, README heading, FastAPI title.
   The GitHub repository description is empty, and the resume bullets
   never used the title.
+
+---
+
+## 2026-10-16 — Legal personal names removed from the committed CSVs; MIT license added
+
+**Personal legal names.** Two pharmacies are registered in NPPES under
+an individual's name as the legal `organization_name` (NPIs 1649333105
+and 1760594675).
+- **The rule:** `output_organization_name()` in
+  `day2/classify_pharmacy_type.py`, also used by
+  `day2/build_final_dataset.py`. When the legal organization name equals
+  the record's own authorized official's name, the CSV gets the trading
+  name (first DBA) instead. That's what the site already showed. It's a
+  rule over NPPES's own fields, not a list of names, and classification
+  still runs on the raw record.
+- **Databases:** both now store the trading name too, so a rebuild from
+  the CSVs and the live data agree.
+- **Unchanged:** the `organization_name_is_individual` flag stays, and the
+  API output is unchanged.
+
+**Regenerate-from-source check.** All four day2/day3 CSVs were
+regenerated in pipeline order (`classify_pharmacy_type.py` ->
+`build_final_dataset.py` -> `classify_ownership.py` ->
+`dedup_addresses.py`).
+- `wa_pharmacies_final.csv`, `wa_pharmacies_ownership.csv` and
+  `wa_pharmacies_deduped.csv` differ from the previous commit in exactly
+  those two `organization_name` cells. The bridge file is unchanged.
+- **`day2/wa_pharmacies_classified.csv` regenerates with 13 further
+  differences,** all from before this change. That file is the original
+  1,200-record Day 2 sample and was never regenerated after the
+  2026-07-18 classification-precedence fix. 11 `non_pharmacy` and 2
+  `military` rows now move to `unclassified_has_pharmacy_taxonomy`.
+- To keep this change small, the committed file keeps its Day 2 contents
+  with only the two names replaced. Regenerating it would update those 13
+  rows to the current rules. It isn't used downstream: the full 1,941-row
+  `wa_pharmacies_final.csv` is.
+
+**Verified:** no tracked file contains any authorized official's full
+name (matched against 731 names from the raw NPPES pulls). The only
+remaining hits were two junk NPPES entries made of ordinary words
+("MANAGED CARE", "CLOSE PHARMACY").
+
+**License:** MIT, "Copyright (c) 2026 Rishabh Jain", in `LICENSE`. The
+README has a one-line License section noting that the data sources
+(CMS NPPES, U.S. Census Bureau, openFDA, OpenStreetMap) keep their own
+terms.

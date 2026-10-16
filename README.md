@@ -437,6 +437,7 @@ In GitHub Actions the database password comes from the repository secret
 | `.github/workflows/daily-snapshot.yml` | The twice-daily schedule |
 | `day2/` - `day9/` | The pipeline as built, step by step (pulls, classification, dedup, geocoding, schema, desert classification) |
 | `DECISIONS.md` / `LIMITATIONS.md` | Every judgment call, and every known gap |
+| `LICENSE` | MIT license for the code |
 | `policy_brief.md` / `policy_brief.docx` | One-page summary of findings |
 
 ---
@@ -446,6 +447,10 @@ In GitHub Actions the database password comes from the repository secret
 Informational only, not medical advice. Check with your pharmacy about
 medication availability. This project is not affiliated with or endorsed by
 the FDA, CMS, or the State of Washington.
+
+## License
+
+Code is released under the [MIT License](LICENSE); the data sources (CMS NPPES, U.S. Census Bureau, openFDA, OpenStreetMap) keep their own terms.
 
 ## Attribution
 

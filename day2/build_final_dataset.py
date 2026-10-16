@@ -12,7 +12,7 @@ import sys
 
 OUT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, OUT_DIR)
-from classify_pharmacy_type import classify  # noqa: E402
+from classify_pharmacy_type import classify, output_organization_name  # noqa: E402
 
 if __name__ == "__main__":
     with open(os.path.join(OUT_DIR, "wa_pharmacies_true_location_raw.json")) as f:
@@ -63,7 +63,7 @@ if __name__ == "__main__":
 
             writer.writerow({
                 "npi": r.get("number"),
-                "organization_name": basic.get("organization_name"),
+                "organization_name": output_organization_name(r),
                 "other_names": dba,
                 "address_1": location.get("address_1"),
                 "city": location.get("city"),

@@ -19,3 +19,9 @@ ALTER TABLE pharmacies ADD COLUMN IF NOT EXISTS organization_name_is_individual 
 
 UPDATE pharmacies SET organization_name_is_individual = TRUE
 WHERE npi IN ('1649333105', '1760594675');
+
+-- And don't keep the legal personal name at all: store the trading name,
+-- as the regenerated day2/day3 CSVs now do. The flag stays as the record
+-- that the legal name was withheld.
+UPDATE pharmacies SET organization_name = dba_name
+WHERE organization_name_is_individual AND dba_name IS NOT NULL AND organization_name IS DISTINCT FROM dba_name;
