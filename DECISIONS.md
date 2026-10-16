@@ -1576,3 +1576,31 @@ new script). The legend code and the layer-error reporting now tolerate
 missing elements, so a stale page still renders the map. Tested by
 loading the shortage page with both elements removed: all 5,311 block
 groups colored, 231 shortages listed, no errors.
+
+**Live re-test after deploy (`25a103e` + `7431264`), 2026-10-16:**
+- **Same concurrent load test that failed before:** 0 failures at every
+  level (1/8/24/48 concurrent; 224 requests). The slowest request went
+  from 60s (timeout) to 4.1s.
+- **Both maps, fresh browser tab each, console open:** real mouse drags
+  across the full range in both directions plus partial sweeps, then
+  three synthetic fast drags (1,203 `input` events each).
+  - **Console errors: 0 on both maps.** Every API request returned 200,
+    apart from 3 (pharmacy) and 6 (shortage) `ERR_ABORTED` entries.
+    Those are superseded requests the slider cancelled on purpose.
+  - **Agreement:** 7 of 7 checks per map agreed. The readout date matched
+    the note or summary date, the count matched the markers or list
+    items, and both matched a fresh API response for that date. On the
+    shortage map, 0 of 5,311 block-group colors mismatched at each check.
+  - **During drags:** of 1,203 mid-drag samples per map, 1,201 were
+    "loading, content cleared" and 2 were "loaded, consistent". Never a
+    previous date's content.
+  - **Requests:** 3 for the pharmacy map and 6 for the shortage map (two
+    per date) across the three synthetic drags - previously one per
+    `input` event.
+- **The errors in the original report:** the browser's network log
+  showed the 500s were all from the pre-deploy page firing one request
+  pair per slider step, with the old `.json()`-on-500 parse errors.
+- **One more fix found while testing:** the pharmacy mode note is
+  cleared while a date loads and varies in length, so the slider jumped
+  vertically under the cursor between drags. Its space is now reserved
+  (`7431264`); the slider stays at the same position in every state.
