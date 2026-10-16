@@ -2137,3 +2137,31 @@ response, 0 of 5,311 colors mismatched.
 stale size. Aligning old against new shows the maps were 38px
 (shortage) and 21px (pharmacy) low, matching the measured off-center
 error.
+
+---
+
+## 2026-10-16 — Favicon added; page loads now log zero console messages
+
+**Change (`2177e58`, webapp only):** a favicon. Nothing else changed.
+- **The icon:** a blue (`#2a78d6`, the site's chain-ownership blue) map pin
+  with a white pharmacy cross, legible at 16px.
+- **`webapp/static/favicon.svg`:** for current browsers.
+- **`webapp/static/favicon.ico`:** 16/32/48px PNG images in an ICO
+  container (2,434 bytes), rendered from the SVG with headless Chrome.
+  It's served at `/favicon.ico` by a new route.
+- **Links:** all three pages carry `<link rel="icon">` tags for both.
+
+**Why:** browsers request `/favicon.ico` on their own. Without it,
+every page load logged "Failed to load resource: 404" - the one console
+message left after the slider and resize fixes.
+
+**Verified on the live site** (headless Chrome, recording every console
+message at every level plus uncaught exceptions):
+- **Before:** each of the three pages logged 1 error (404 for
+  `/favicon.ico`).
+- **After:** each page logs **0 messages**, and both `/favicon.ico`
+  (`image/x-icon`) and `/static/favicon.svg` return 200.
+- **Sliders:** real mouse drags (`Input.dispatchMouseEvent`) on both maps
+  at 1440x1080 and 375x812 - full range, partial and back - agreed with a
+  fresh API response at every stop. 0 of 5,311 colors mismatched, and
+  each run logged 0 console messages.
