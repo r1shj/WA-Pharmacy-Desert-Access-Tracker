@@ -336,10 +336,14 @@ border for northern WA counties.
   week later and the live site's maps stop loading until it's resumed in
   the Supabase dashboard.
 
-A failed run (an API outage, or a safeguard refusing suspicious data)
-writes no snapshot for that day and turns the workflow run red. Every run,
-successful or not, is logged in `snapshot_runs`. Missed days can't be
-recovered later - neither openFDA nor NPPES serves past states.
+GitHub's scheduler is also best-effort: it can delay or drop a scheduled
+run, and the very first slot after the workflow was added (2026-10-16)
+never fired. The job therefore runs twice a day (14:17 and 20:43 UTC).
+A day is lost only if both runs are dropped or fail (an API outage, or a
+safeguard refusing suspicious data). A failed run turns the workflow red,
+and every run, successful or not, is logged in `snapshot_runs`. Missed
+days can't be recovered later - neither openFDA nor NPPES serves past
+states.
 
 **What would close this gap:** any push to the repository resets
 GitHub's 60-day clock, and re-enabling the workflow in the Actions tab

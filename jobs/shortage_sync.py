@@ -15,9 +15,15 @@ Per distinct shortage (generic_name), one observation can:
                                          end_date_basis 'last_observed_in_feed'.
                                          Leaving the feed is NOT confirmation the
                                          shortage ended, so it's never called resolved.
-  - see it reappear after dropping out -> new interval row starting that day
-Confirmed-resolved rows that later leave the feed are left alone.
+  - see it reappear after dropping out -> new interval row starting that day,
+                                         unless it dropped out the same day
+                                         (a flap between same-day runs), which
+                                         just reopens the original interval
+Confirmed-resolved rows that later leave the feed are left alone. Running
+more than once a day is safe: every change is relative to the table's
+current state, so a repeat run with the same feed changes nothing.
 """
+import datetime
 import json
 import urllib.request
 from collections import defaultdict
@@ -99,11 +105,13 @@ def apply_observation(cur, obs_date, records, enforce_dropout_limit=True):
     generic_name -> dict with status, initial_posting_date,
     last_update_date, n_package_variants, and optionally dosage_form /
     therapeutic_category. Returns a summary dict. Caller commits."""
+    obs = datetime.date.fromisoformat(str(obs_date))
     cur.execute("""
-        SELECT DISTINCT ON (generic_name) id, generic_name, tier, end_date_basis
+        SELECT DISTINCT ON (generic_name) id, generic_name, tier, end_date_basis, last_observed_date
         FROM shortages ORDER BY generic_name, id DESC
     """)
-    current = {r[1]: {"id": r[0], "tier": r[2], "basis": r[3]} for r in cur.fetchall()}
+    current = {r[1]: {"id": r[0], "tier": r[2], "basis": r[3], "last_observed": r[4]}
+               for r in cur.fetchall()}
 
     open_names = {g for g, r in current.items() if r["basis"] is None}
     dropouts = open_names - set(records)
@@ -112,10 +120,21 @@ def apply_observation(cur, obs_date, records, enforce_dropout_limit=True):
             f"{len(dropouts)} of {len(open_names)} open shortages missing from the {obs_date} feed "
             f"(> {MAX_DROPOUT_FRACTION:.0%}) - refusing to close them")
 
-    summary = {"added": 0, "reappeared": 0, "resolved": 0, "unresolved": 0, "dropped_out": 0}
+    summary = {"added": 0, "reappeared": 0, "resolved": 0, "unresolved": 0, "dropped_out": 0,
+               "same_day_dropouts_reverted": 0}
     for g, rec in records.items():
         row = current.get(g)
         resolved = rec["status"] == "Resolved"
+        if (row and row["basis"] == "last_observed_in_feed"
+                and row["last_observed"] is not None and row["last_observed"] >= obs):
+            # Seen earlier today, missed by a later run today, and back now: a
+            # feed flap between same-day runs, not a real dropout. Reopen the
+            # interval - a new row starting today would overlap the old one
+            # (which ends today) and count this shortage twice for the day.
+            cur.execute("""UPDATE shortages SET tier = 2, end_date = NULL,
+                end_date_basis = NULL WHERE id = %s""", (row["id"],))
+            row = dict(row, tier=2, basis=None)
+            summary["same_day_dropouts_reverted"] += 1
         if row is None or row["basis"] == "last_observed_in_feed":
             # New shortage, or one that had dropped out and is back: new interval.
             start = rec["initial_posting_date"] if row is None else obs_date

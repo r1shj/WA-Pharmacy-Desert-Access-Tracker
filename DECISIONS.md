@@ -1399,3 +1399,53 @@ darkens or lightens the whole map uniformly. It can't change which block
 groups are more vulnerable than others - that pattern still comes entirely
 from access and income. That remaining limit is stated in LIMITATIONS.md,
 not hidden by the new colors.
+
+---
+
+## 2026-10-16 — Daily snapshot runs twice a day; repeat runs audited and made safe
+
+**What happened:** the workflow's first-ever scheduled slot (14:17 UTC
+2026-10-16, the morning after it was added) never fired. There was no
+run at all, not even skipped or failed. Nothing was misconfigured: the
+file on `main` had a valid `schedule` trigger, Actions was enabled, the
+workflow was `active`, and GitHub's status page showed no incident.
+GitHub documents scheduled runs as best-effort (they can be delayed or
+dropped under load), and new schedules are commonly reported to miss
+their first slot. That day's snapshot was captured with a manual run.
+
+**Decision:** add a second daily schedule at **20:43 UTC** (13:43 PDT /
+12:43 PST) alongside 14:17 UTC. Both are always on the same Pacific date,
+which is the job's "today", so the second run re-observes the same day
+rather than starting a new one. Changing the workflow file also makes
+GitHub re-register the schedule.
+
+**Why a second run is safe - audited per table:**
+- `pharmacy_snapshots`: the day's `observed` rows are deleted and
+  re-inserted, so the last run of the day wins, with no duplicates.
+  The 3% drop safeguard compares against the previous *date*, not an
+  earlier run the same day.
+- `npi_review_queue`: an upsert that refreshes `last_seen_date` and the
+  address, and never resets `first_seen_date`.
+- `shortages`: every change is computed against the table's current
+  state, so a repeat run with the same feed changes nothing (tested).
+  **One real gap was found and fixed:** with three or more runs in a day,
+  a shortage seen → missed → seen again would have been closed with
+  `end_date` = today and reopened as a new row *starting* today. That's
+  two overlapping intervals, counting the shortage twice for that day in
+  the list and the vulnerability score. Exactly two runs couldn't
+  trigger it, but a manual run plus both scheduled ones can. A same-day
+  dropout that comes back now reopens the original interval instead
+  (`same_day_dropouts_reverted` in the run summary). Tested in a
+  rolled-back transaction: see/miss/see on one day leaves 274 rows and
+  the shortage counted once. A real cross-day dropout (missed 10-21,
+  back 10-22) still produces a new interval with no overlap.
+- `snapshot_runs`: one row per run, so two (or more) per day. The
+  shortage deltas (`added`, `resolved`, `dropped_out`, ...) are relative
+  to the previous run, so summing them across a day is still correct. The
+  pharmacy fields (`locations_active`, `new_npis_queued`) are *state*
+  counts and must not be summed - read the latest `ok` run per
+  `(run_date, job)`. This matters for the future email-alerts idea, which
+  would key off shortage `added`.
+
+The workflow's `concurrency` group already keeps two runs from
+overlapping. A run that fires while another is in progress waits.

@@ -5,9 +5,13 @@ name: Daily snapshot
 
 on:
   schedule:
-    # 14:17 UTC = 7:17 Pacific (PDT) / 6:17 (PST). Off the top of the hour,
-    # when GitHub's scheduler is busiest and most likely to delay runs.
-    - cron: "17 14 * * *"
+    # Two runs a day: GitHub's scheduler is best-effort and can drop a run,
+    # and a missed day can't be recovered. Both fall on the same Pacific
+    # date (the job's "today"), and a second run only overwrites that day's
+    # snapshot - see DECISIONS.md 2026-10-16. Off the top of the hour, when
+    # the scheduler is busiest and most likely to delay runs.
+    - cron: "17 14 * * *"  # 14:17 UTC = 7:17 PDT / 6:17 PST
+    - cron: "43 20 * * *"  # 20:43 UTC = 13:43 PDT / 12:43 PST
   workflow_dispatch:
     inputs:
       only:
