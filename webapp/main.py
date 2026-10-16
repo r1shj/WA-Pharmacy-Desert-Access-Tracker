@@ -242,6 +242,13 @@ def map_shortages_page():
     return FileResponse(os.path.join(APP_DIR, "static", "shortage_map.html"), headers=PAGE_HEADERS)
 
 
+# Browsers request /favicon.ico on their own; without it every page load
+# logged a 404 (DECISIONS.md 2026-10-16).
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return FileResponse(os.path.join(APP_DIR, "static", "favicon.ico"), media_type="image/x-icon")
+
+
 # ---------------------------------------------------------------------------
 # API - pharmacy map (Day 7)
 # ---------------------------------------------------------------------------
