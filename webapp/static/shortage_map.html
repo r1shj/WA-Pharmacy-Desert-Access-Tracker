@@ -31,9 +31,16 @@
       </div>
 
       <h3>Community vulnerability</h3>
-      <div class="legend-row"><span class="legend-swatch legend-swatch--fill" style="background:#86b6ef"></span><span class="legend-label">Low</span></div>
-      <div class="legend-row"><span class="legend-swatch legend-swatch--fill" style="background:#2a78d6"></span><span class="legend-label">Medium</span></div>
-      <div class="legend-row"><span class="legend-swatch legend-swatch--fill" style="background:#104281"></span><span class="legend-label">High</span></div>
+      <div class="legend-gradient">
+        <div id="vulnerability-gradient" class="legend-gradient__bar"></div>
+        <div class="legend-gradient__ticks">
+          <span style="left:0%">0</span><span style="left:33%">33</span><span style="left:66%">66</span><span style="left:100%">100</span>
+        </div>
+        <div class="legend-gradient__bands">
+          <span>low</span><span>medium</span><span>high</span>
+        </div>
+        <div class="legend-label legend-gradient__caption">Score out of 100 — darker is more vulnerable. Moving the slider shifts every block group by the national shortage points.</div>
+      </div>
       <div class="legend-row"><span class="legend-swatch legend-swatch--fill" style="background:#898781; border:1px dashed #898781"></span><span class="legend-label">Income data suppressed — partial score, no band</span></div>
 
       <h3>Active shortages (<span id="shortage-count">–</span>)</h3>

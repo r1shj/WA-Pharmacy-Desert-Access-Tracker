@@ -1325,8 +1325,12 @@ printed.
 
 **Supabase is now the source of truth.** The local `pharmacy_tracker`
 database is a development copy and will drift from it. The local launchd
-agent (`day8_prep/run_daily_snapshots.sh`) still writes CSVs and is now
-redundant.
+agent (`com.pharmacytracker.dailysnapshot`, running
+`day8_prep/run_daily_snapshots.sh`) was redundant once Actions was live.
+On 2026-10-16, at the owner's request, it was unloaded and disabled with
+`launchctl bootout` + `launchctl disable`. The plist is kept in
+`~/Library/LaunchAgents`, so `launchctl enable` + `bootstrap` restores it.
+`day8_prep/snapshots/` ends at 2026-10-15.
 
 ---
 
@@ -1356,3 +1360,42 @@ the new API. With no build step to fingerprint filenames, revalidation
 (an ETag 304) is the simplest way to make a redeploy reach returning
 visitors. `db()` in `webapp/main.py` now goes through `jobs/db.py`
 (`DATABASE_URL` → `PG*` → local), which Render needs.
+
+---
+
+## 2026-10-16 — Vulnerability map colors by the continuous 0-100 score, not the three bands (registered before implementation)
+
+**Problem (LIMITATIONS.md, found testing the live site):** with access
+and income each worth 0 or 40, every complete score falls in 0-20, 40-60
+or 80-100, so the band cutoffs at 33 and 66 can never be crossed by the
+0-20 shortage component. Coloring by band made the national-shortage
+factor invisible on the map, and "high" was exactly the 237 deserts.
+
+**Decision (chosen by the project owner from two options; the other was
+re-weighting components or moving cutoffs):** the choropleth fill becomes
+a continuous function of `vulnerability_score` for complete records.
+**The scoring formula, weights, saturation reference (150) and band
+definitions are unchanged.** Bands stay in the API response and in each
+popup as labels; they just no longer drive the fill.
+
+**Color rule, fixed here before any code:**
+- Sequential single-hue blue, light to dark, with the three old band
+  colors kept as anchors at the band cutoffs so the meaning carries over:
+  0 → `#d6e6f9`, 33 → `#86b6ef`, 66 → `#2a78d6`, 100 → `#104281`.
+- Interpolated in OKLab, not sRGB, so mid-tones stay clean blue instead
+  of going grey, and equal score steps look roughly equally different.
+- One color function drives both the map fill and the legend gradient,
+  so they can't disagree.
+- Legend: a 0-100 gradient bar with ticks at 0 / 33 / 66 / 100 marking
+  where the low / medium / high labels apply.
+- Suppressed-income block groups (partial 0-60 score) are **unchanged**:
+  grey and dashed. Their score is on a different scale, so placing them on
+  the 0-100 ramp would imply a comparability the protocol rules out.
+
+**What this does and doesn't fix:** the shortage component now visibly
+moves every block group's shade as the slider moves (by up to 20 points
+of the 100-point ramp). Because it's a single statewide number, it
+darkens or lightens the whole map uniformly. It can't change which block
+groups are more vulnerable than others - that pattern still comes entirely
+from access and income. That remaining limit is stated in LIMITATIONS.md,
+not hidden by the new colors.

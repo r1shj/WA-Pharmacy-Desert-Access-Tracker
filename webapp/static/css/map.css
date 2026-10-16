@@ -95,6 +95,23 @@ html, body {
 .legend-swatch--hollow { background: transparent; border: 2px solid var(--border-pharmacy); }
 .legend-label { color: var(--text-secondary); }
 
+/* Continuous-scale legend (shortage map vulnerability score). */
+.legend-gradient { margin-bottom: 10px; }
+.legend-gradient__bar { height: 12px; border-radius: 3px; opacity: 0.85; }
+.legend-gradient__ticks {
+  position: relative; height: 14px; margin-top: 2px;
+  font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums;
+}
+.legend-gradient__ticks span { position: absolute; top: 0; transform: translateX(-50%); }
+.legend-gradient__ticks span:first-child { transform: none; }
+.legend-gradient__ticks span:last-child { transform: translateX(-100%); }
+.legend-gradient__bands {
+  display: grid; grid-template-columns: 33fr 33fr 34fr;
+  font-size: 11px; color: var(--text-secondary); text-align: center;
+  border-top: 1px solid var(--gridline); padding-top: 2px;
+}
+.legend-gradient__caption { display: block; margin-top: 6px; font-size: 12px; }
+
 .controls {
   background: var(--surface-1);
   border-top: 1px solid var(--border);

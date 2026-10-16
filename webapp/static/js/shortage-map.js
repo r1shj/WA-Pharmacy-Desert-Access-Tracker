@@ -8,22 +8,76 @@
  * varies by location.
  */
 
-// Sequential blue ramp (dataviz skill's default sequential hue) -
-// vulnerability is a magnitude/severity scale, not independent
-// categories, so it gets a light->dark ramp rather than status colors.
-const VULNERABILITY_COLORS = {
-  low: '#86b6ef',
-  medium: '#2a78d6',
-  high: '#104281',
-};
+// Continuous sequential blue ramp over the 0-100 score (DECISIONS.md
+// 2026-10-16). Fill used to come from the low/medium/high band, but the
+// band can never change with shortage points - see LIMITATIONS.md. The
+// old band colors stay as anchors at the band cutoffs.
+const VULNERABILITY_RAMP = [
+  [0, '#d6e6f9'],
+  [33, '#86b6ef'],
+  [66, '#2a78d6'],
+  [100, '#104281'],
+];
 const SUPPRESSED_STYLE = { fillColor: '#898781', fillOpacity: 0.35, color: '#898781', weight: 1, dashArray: '3,3' };
 const DEFAULT_STYLE = { fillColor: '#e1e0d9', fillOpacity: 0.2, color: '#c3c2b7', weight: 0.5 };
 
+// Interpolate in OKLab, not sRGB, so mid-tones stay clean blue and equal
+// score steps look about equally different.
+function hexToOklab(hex) {
+  const lin = [1, 3, 5].map(i => {
+    const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+    return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  const [r, g, b] = lin;
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [
+    0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s,
+  ];
+}
+
+function oklabToHex([L, A, B]) {
+  const l = Math.pow(L + 0.3963377774 * A + 0.2158037573 * B, 3);
+  const m = Math.pow(L - 0.1055613458 * A - 0.0638541728 * B, 3);
+  const s = Math.pow(L - 0.0894841775 * A - 1.2914855480 * B, 3);
+  const lin = [
+    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+  ];
+  return '#' + lin.map(c => {
+    const v = c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+    return Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, '0');
+  }).join('');
+}
+
+const RAMP_LAB = VULNERABILITY_RAMP.map(([stop, hex]) => [stop, hexToOklab(hex)]);
+
+function colorForScore(score) {
+  const x = Math.min(100, Math.max(0, score));
+  for (let i = 1; i < RAMP_LAB.length; i++) {
+    const [s0, c0] = RAMP_LAB[i - 1];
+    const [s1, c1] = RAMP_LAB[i];
+    if (x <= s1) {
+      const t = (x - s0) / (s1 - s0);
+      return oklabToHex(c0.map((v, k) => v + t * (c1[k] - v)));
+    }
+  }
+  return VULNERABILITY_RAMP[VULNERABILITY_RAMP.length - 1][1];
+}
+
 function styleForScore(s) {
   if (s.vulnerability_score_basis === 'partial_income_suppressed') return SUPPRESSED_STYLE;
-  const color = VULNERABILITY_COLORS[s.vulnerability_band] || '#c3c2b7';
+  const color = colorForScore(s.vulnerability_score);
   return { fillColor: color, fillOpacity: 0.6, color: color, weight: 0.5 };
 }
+
+// Legend gradient from the same function as the fill, so they can't drift.
+document.getElementById('vulnerability-gradient').style.background =
+  `linear-gradient(to right, ${Array.from({ length: 11 }, (_, i) => colorForScore(i * 10)).join(', ')})`;
 
 function popupHtmlForScore(s) {
   if (s.vulnerability_score_basis === 'partial_income_suppressed') {

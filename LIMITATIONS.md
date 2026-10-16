@@ -344,3 +344,32 @@ recovered later - neither openFDA nor NPPES serves past states.
 **What would close this gap:** any push to the repository resets
 GitHub's 60-day clock, and re-enabling the workflow in the Actions tab
 restores it. A paid Supabase tier doesn't pause.
+
+---
+
+## The shortage factor shifts the whole vulnerability map uniformly; it can't change which places look most vulnerable
+
+**History:** until 2026-10-16 the map colored block groups by the
+low/medium/high band, and **no block group ever changed color as the
+shortage slider moved** (found while testing the live site). Access and
+income are each worth 0 or 40, so before shortages every complete score
+is 0, 40 or 80. Shortage points add at most 20, and the band cutoffs at
+33 and 66 fall in the gaps. "High" was exactly the 237 pharmacy deserts.
+**Fixed** by coloring on the continuous 0-100 score instead (DECISIONS.md
+2026-10-16): the shade now moves with the slider. For example, the
+lightest group goes from `#d4e5f9` at 1 shortage point (2017-10-28) to
+`#b4d2f5` at 14 points (2026-10-16).
+
+**What's still true:** shortage points are one statewide number, so they
+darken or lighten *every* block group by the same amount. The map's
+spatial pattern - which places look more vulnerable than others - comes
+entirely from access and income, and the shortage factor moves shades by
+at most 20 of 100 points. The low/medium/high labels in the popups still
+can't change with the slider, for the arithmetic reason above. This
+follows from the source data (openFDA has no sub-state geography), not
+from the color choice.
+
+**What would close it:** a shortage measure that varies by place, which
+no public source provides (see the "doesn't know what's in stock" notes),
+or re-weighting so shortage points can cross a band boundary. Either is a
+methodology change to register in DECISIONS.md first.
