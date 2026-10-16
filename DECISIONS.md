@@ -1449,3 +1449,45 @@ GitHub re-register the schedule.
 
 The workflow's `concurrency` group already keeps two runs from
 overlapping. A run that fires while another is in progress waits.
+
+---
+
+## 2026-10-16 — Security audit: full git history and Actions logs scanned for credentials, nothing found
+
+(This is the "security-audit entry" `.gitignore` refers to. The
+pre-publication audit before the first commit was reported in chat but
+never written down here.)
+
+**What was scanned:** every object in the git database, reachable or
+not: 136 objects, including 6 commits. One of those commits is the
+pre-amend initial commit, which was never pushed; every other object is
+on the public `origin/main`. Also scanned: all commit messages, the
+public GitHub Actions run logs (2 runs), and the working tree including
+untracked and ignored files (300 files, local only).
+
+**What was searched for, without ever printing a value:**
+- **The Census API key** pasted on Day 1, matched exactly. The value was
+  taken in memory from the session transcript and confirmed as the key
+  used in the Day 1 Census API calls.
+- **The Supabase database password**, matched exactly in its raw,
+  percent-encoded and plus-encoded forms. It was read in memory from the
+  local environment variable.
+- **Any `postgres://` / `postgresql://` URL with a non-placeholder
+  password.**
+- **Generic credential patterns:** AWS access keys, GitHub tokens,
+  SendGrid keys, private-key blocks, Supabase JWTs, `key=` plus 40 hex
+  characters, and literal `PASSWORD=` assignments.
+
+**Result: zero hits everywhere.** No connection URL with a password
+exists anywhere in history. The only database references are the
+pooler hostname and user in the workflow's `PG*` variables (not secret
+by design) and the variable *name* `DATABASE_URL`. The patterns were
+checked against planted fake credentials and caught each one (connection
+string, Census `key=`, `PGPASSWORD=`, AWS, GitHub), while correctly
+skipping the `[PASSWORD]` placeholder. So "no hits" is a real negative,
+not a broken scan.
+
+**No rotation is needed for anything in the repo.** Separately, rotating
+the Census key is still recommended, as advised on Day 1. It was passed
+as a literal command-line argument then, so it exists in the local
+session transcript, though not in any file or commit.
