@@ -33,7 +33,7 @@
       <div class="legend-row"><span class="legend-swatch" style="background:#eda100"></span><span class="legend-label">Government / tribal</span></div>
       <div class="legend-row"><span class="legend-swatch" style="background:#008300"></span><span class="legend-label">Independent (confirmed)</span></div>
       <div class="legend-row"><span class="legend-swatch" style="background:#898781"></span><span class="legend-label">Unknown ownership</span></div>
-      <div class="legend-row"><span class="legend-swatch" style="background:#898781; border:2px dashed #fab219"></span><span class="legend-label">REVIEW bucket — inclusion not yet confirmed</span></div>
+      <div class="legend-row"><span class="legend-swatch" style="background:#898781; border:2px dashed #fab219"></span><span class="legend-label">REVIEW bucket — walk-in status not yet confirmed; not counted in desert status</span></div>
       <div class="legend-row"><span class="legend-swatch legend-swatch--hollow"></span><span class="legend-label">OR/ID reference pharmacy (not WA data)</span></div>
 
       <h3>On the map right now</h3>
@@ -46,20 +46,32 @@
     <div id="layer-error" class="limitation-note limitation-note--error" role="alert" hidden></div>
     <div id="mode-note" class="limitation-note"></div>
     <div class="limitation-note">
-      <strong>Before October 2026 this is a growth-only history, not a closures record.</strong>
+      <strong>Before 2026-07-18 this is a growth-only history, not a closures record.</strong>
       NPPES (the federal registry this is built on) does not publicly expose when a pharmacy
       deactivated its registration, so for earlier dates a pharmacy that has since closed still
-      appears present at every date after it first registered. Since 2026-10-15 the registry is
-      re-swept daily and a location drops off once none of its registrations are active — but
-      pharmacies often don't deactivate promptly when they close, so a closure can still lag
-      or never appear. Newly registered pharmacies aren't added until they're reviewed.
+      appears present at every date after it first registered, and one that closed and deactivated
+      before July 2026 is missing entirely. Real observed snapshots begin 2026-07-18, and the
+      registry has been re-swept daily since 2026-10-15: a location drops off once none of its
+      registrations are active. An inactive registration isn't proof a pharmacy closed, and
+      pharmacies often don't deactivate promptly when they do, so closures can lag or never appear.
+      Newly registered pharmacies aren't added until they're reviewed.
     </div>
     <div class="limitation-note">
       <strong>Dates before ~2008 reflect a registration deadline, not necessarily real openings.</strong>
-      Roughly half of today's pharmacies show a first-registration date clustered in a few months
-      of 2006, lining up with the federal NPI system's rollout — many of those pharmacies had
-      already existed for years and were simply registering for the first time because it became
-      mandatory, not opening that week.
+      Roughly half of today's pharmacy registrations (49%) date from 2006, and 80% of those from
+      May–August 2006, lining up with the federal NPI system's rollout — many of those pharmacies
+      had already existed for years and were simply registering for the first time because it
+      became mandatory, not opening that week.
+    </div>
+    <div class="limitation-note">
+      <strong>Desert status is geographic proximity, not travel access.</strong>
+      A block group is a desert when it is low-income and its residents' population-weighted
+      center is more than 1 mile (urban) or 10 miles (rural) in a straight line from the nearest
+      <em>confirmed</em> walk-in pharmacy (Oregon/Idaho border pharmacies count). "Low income" uses
+      a county median computed from Census data as a proxy for HUD's area median income, not
+      HUD's published figure. Locations still in the REVIEW bucket (dashed amber outline) aren't
+      counted yet, so a desert can contain one — some deserts may drop out once those are
+      resolved.
     </div>
   </div>
 </div>

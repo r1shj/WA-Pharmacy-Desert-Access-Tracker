@@ -75,7 +75,7 @@ function loadBlockGroups() {
             <strong>Block group ${p.geoid}</strong><br>
             Status: ${p.pharmacy_desert_status}<br>
             ${p.is_urban ? 'Urban' : 'Rural'} (threshold ${p.distance_threshold_miles}mi)<br>
-            Nearest pharmacy: ${p.nearest_pharmacy_miles != null ? p.nearest_pharmacy_miles.toFixed(2) + ' mi' : 'n/a'}<br>
+            Nearest confirmed walk-in pharmacy: ${p.nearest_pharmacy_miles != null ? p.nearest_pharmacy_miles.toFixed(2) + ' mi (straight line)' : 'n/a'}<br>
             Income: ${p.income_status}<br>
             Population: ${p.population}
           `);

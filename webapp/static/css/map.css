@@ -112,10 +112,22 @@ html, body {
 }
 .legend-gradient__caption { display: block; margin-top: 6px; font-size: 12px; }
 
+/* The notes under the slider must never squeeze the map out: cap the
+   panel and let the notes scroll, with the slider pinned at its top. */
+.app__body { min-height: 45vh; }
 .controls {
   background: var(--surface-1);
   border-top: 1px solid var(--border);
-  padding: 12px 16px 14px;
+  padding: 0 16px 14px;
+  max-height: 45vh;
+  overflow-y: auto;
+}
+#slider-root {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface-1);
+  padding-top: 12px;
 }
 
 .date-slider { display: flex; align-items: center; gap: 12px; }

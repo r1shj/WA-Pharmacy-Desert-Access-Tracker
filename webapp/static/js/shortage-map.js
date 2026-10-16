@@ -91,13 +91,13 @@ function popupHtmlForScore(s) {
       <span class="popup__row" style="font-weight:600; color:#ab7900">⚠ Partial score - income data suppressed</span><br>
       <span class="popup__row">Score: ${s.vulnerability_score} / ${s.vulnerability_score_max} (access + shortage only)</span><br>
       <span class="popup__row">Low pharmacy access: ${s.is_low_access ? 'yes' : 'no'}</span><br>
-      <span class="popup__row">Nearest pharmacy: ${s.nearest_pharmacy_miles != null ? s.nearest_pharmacy_miles.toFixed(2) + ' mi' : 'n/a'}</span>
+      <span class="popup__row">Nearest confirmed walk-in pharmacy: ${s.nearest_pharmacy_miles != null ? s.nearest_pharmacy_miles.toFixed(2) + ' mi (straight line)' : 'n/a'}</span>
     `;
   }
   return `
     <strong>Block group ${s.geoid}</strong><br>
     <span class="popup__row">Vulnerability: <strong>${s.vulnerability_band}</strong> (${s.vulnerability_score} / ${s.vulnerability_score_max})</span><br>
-    <span class="popup__row">Low pharmacy access: ${s.is_low_access ? 'yes' : 'no'} (${s.nearest_pharmacy_miles != null ? s.nearest_pharmacy_miles.toFixed(2) + ' mi to nearest' : 'n/a'})</span><br>
+    <span class="popup__row">Low pharmacy access: ${s.is_low_access ? 'yes' : 'no'} (${s.nearest_pharmacy_miles != null ? s.nearest_pharmacy_miles.toFixed(2) + ' mi straight-line to the nearest confirmed walk-in pharmacy' : 'n/a'})</span><br>
     <span class="popup__row">Income: ${s.income_status}</span><br>
     <span class="popup__row">Desert status: ${s.pharmacy_desert_status}</span>
   `;

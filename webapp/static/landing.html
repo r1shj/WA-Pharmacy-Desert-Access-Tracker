@@ -39,28 +39,32 @@
         <p>
           Pharmacy registrations come from the federal NPPES provider registry, filtered to
           locations physically in Washington, classified by type (walk-in retail, clinic,
-          mail-order, and so on) and by ownership (chain, health system, independent), then
-          geocoded with the U.S. Census Bureau geocoder. Several registrations at the same
-          storefront are merged into one physical location.
+          mail-order, and so on) and by ownership (chain, health system, government/tribal,
+          independent only where there's positive evidence, otherwise unknown), then geocoded
+          with the U.S. Census Bureau geocoder. Several registrations at the same storefront are
+          merged into one physical location.
         </p>
       </div>
       <div class="step">
         <h3>Pharmacy deserts</h3>
         <p>
           Each of Washington's census block groups is measured from where its residents
-          actually live (its population-weighted center) to the nearest walk-in pharmacy,
-          including pharmacies just across the Oregon and Idaho borders. A block group is a
-          desert when it is both low-income and farther than 1 mile (urban) or 10 miles
-          (rural) from a pharmacy.
+          actually live (its population-weighted center), in a straight line, to the nearest
+          confirmed walk-in pharmacy, including pharmacies just across the Oregon and Idaho
+          borders. A block group is a desert when it is both low-income and farther than
+          1 mile (urban) or 10 miles (rural) from a pharmacy. That's geographic proximity, not
+          travel time.
         </p>
       </div>
       <div class="step">
         <h3>Shortage context</h3>
         <p>
-          The FDA's national drug-shortage list is checked every day. A vulnerability index
+          The FDA's national drug-shortage list is checked twice a day. A vulnerability index
           combines each block group's pharmacy access, income, and current national shortages
           in chronic-condition drug categories, to show which communities may have the least
-          capacity to adapt when shortages occur.
+          capacity to adapt when shortages occur. The shortage part is one national number, the
+          same everywhere, so it shifts the whole map; differences between places come from
+          access and income.
         </p>
       </div>
       <div class="step">
@@ -68,7 +72,8 @@
         <p>
           Each map has its own date slider. On the <a href="/map/pharmacy">pharmacy map</a>,
           it shows which pharmacies had registered by a given date, back to 2005, and from
-          October 2026 on, which were still active in the daily registry sweep. On the
+          2026-07-18 on, which were active in an observed registry snapshot (swept daily since
+          October 2026). On the
           <a href="/map/shortages">shortage map</a>, it shows which national shortages FDA
           listed on a given date, back to 2012, and recomputes the vulnerability index for
           that day.
@@ -89,6 +94,8 @@
         water or mountains are longer.</li>
       <li><strong>The low-income threshold is an approximation</strong> of HUD's 80%-of-area-median
         standard, computed from Census data rather than HUD's own published figures.</li>
+      <li><strong>Some deserts may not be.</strong> Only pharmacies confirmed as walk-in are counted;
+        locations still under review would shrink the desert map once resolved.</li>
     </ul>
     <p>Every known gap is documented in
       <a href="https://github.com/r1shj/WA-Pharmacy-Desert-Access-Tracker/blob/main/LIMITATIONS.md">LIMITATIONS.md</a>,
@@ -100,7 +107,7 @@
     <p>
       Data: <a href="https://npiregistry.cms.hhs.gov/">CMS NPPES</a> ·
       U.S. Census Bureau (<a href="https://www.census.gov/programs-surveys/acs">ACS</a>,
-      TIGER/Line, Centers of Population, Geocoder) ·
+      TIGER/Line, Centers of Population, Urban Areas, Geocoder) ·
       <a href="https://open.fda.gov/apis/drug/drugshortages/">openFDA Drug Shortages</a> ·
       Map tiles © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors
     </p>
