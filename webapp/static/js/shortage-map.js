@@ -115,6 +115,8 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 // the window can resize - and a stale size left the map off-center and
 // stopped popups auto-panning into view (DECISIONS.md 2026-10-16).
 new ResizeObserver(() => map.invalidateSize()).observe(document.getElementById('map'));
+// Page scroll over the map scrolls the page; Ctrl/Cmd + wheel or two fingers move the map.
+makeMapScrollFriendly(map);
 
 const blockGroupLayersByGeoid = {};
 

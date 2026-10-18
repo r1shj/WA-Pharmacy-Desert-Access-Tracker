@@ -8,7 +8,7 @@ logged retroactively.
 
 ---
 
-## Current state (as of 2026-10-16)
+## Current state (as of 2026-10-18)
 
 *A snapshot for orientation, kept up to date; the dated entries below are
 the permanent record.*
@@ -69,6 +69,10 @@ are applied: no individuals' names in the app or in tracked files, the
 the owner decisions below.
 
 **Known open items:**
+- **Owner check pending: map gestures on a real phone.** They were tested
+  only with Chrome's touch emulation: one finger scrolls the page, two
+  fingers move the map, the slider drags by finger. iOS Safari and
+  Android Chrome are unverified (entry 2026-10-18).
 - **Owner decision pending:** whether to rewrite git history to purge
   individuals' names, which are still in the initial commit. See the
   Day 11 fixes entry for what it involves. The current tree has none.
@@ -2165,3 +2169,135 @@ message at every level plus uncaught exceptions):
   at 1440x1080 and 375x812 - full range, partial and back - agreed with a
   fresh API response at every stop. 0 of 5,311 colors mismatched, and
   each run logged 0 console messages.
+
+---
+
+## 2026-10-18 — Taller maps on a normally scrolling page; the map no longer traps the scroll
+
+**Change (webapp only; shared CSS plus one new shared script).** No data,
+API, caching or slider logic changed; `date-slider.js` is untouched.
+
+**Layout (`map.css`):**
+- **Page scroll:** the page scrolls like a normal page. Gone: the
+  one-screen layout, the 45vh notes box that scrolled on its own, and the
+  sticky slider. Order: header, map (legend beside it on desktop), slider,
+  notes.
+- **Map height:** `clamp(420px, 100dvh - 200px, 900px)`, with `vh` lines
+  as the fallback for browsers without `dvh`. The 200px keeps the header,
+  the slider and the top of the notes on screen with the map.
+  - **Not `70dvh`:** that was the suggested figure, but it would have made
+    the shortage map *shorter* than before on desktop (844 -> 756px at
+    1920x1080, 647 -> 630px at 1440x900), because that page's notes panel
+    was short.
+  - **What actually needs to stay on screen** below the map is roughly
+    fixed (header + slider), so the height is the screen minus a fixed
+    reserve, not a fraction of it.
+- **Short screens** (`max-height: 540px`, e.g. a phone in landscape): the
+  map is `100dvh - 120px`, at least 240px, so it fits on screen with the
+  slider. This rule meets the main one at 420px when the screen is 540px
+  tall.
+- **Legend:** desktop keeps it beside the map. The legend column is the
+  map's height and scrolls within it, as before. At 800px wide or less,
+  it goes below the slider (as before), not between the map and the
+  slider: on the shortage page the legend and list are most of a screen
+  tall, and putting them first would push the slider a screen away from
+  the map.
+- **Header:** the gap between wrapped header rows is 4px (was 12px). This
+  only matters on phones, where the header wraps. It's what lets the
+  pharmacy page's slider fit on screen at 667x375.
+- **Extra fix:** popup content is capped at the screen width minus 64px.
+  Leaflet's 300px cap plus padding made popups 352px wide, wider than a
+  320px phone's map, so they were clipped 16px on each side whatever the
+  pan. This predates the change; screens 375px and up are unaffected.
+
+**Gestures (`webapp/static/js/map-gestures.js`, loaded by both map pages;
+each page calls `makeMapScrollFriendly(map)` once).** Plain Leaflet 1.9,
+no plugin. I considered Leaflet.GestureHandling, the usual plugin for
+this, but Leaflet's own handlers already do what's needed.
+- **Desktop wheel:** a wheel or trackpad scroll over the map scrolls the
+  page, and Ctrl/Cmd + wheel zooms the map.
+  - A trackpad pinch also zooms, since browsers send it as Ctrl + wheel.
+  - A capture-phase listener on the map container stops unmodified wheel
+    events before they reach Leaflet's wheel-zoom listener. Nothing
+    cancels them, so the browser scrolls the page.
+  - Leaflet's own wheel zoom (smoothing, pinch) is kept for the modified
+    events, and it cancels them, so the browser doesn't zoom the page.
+  - A hint, "Use ⌘ + scroll to zoom the map" ("Ctrl" off Apple
+    platforms), shows for 1.5s.
+  - **Why not "click the map to enable wheel zoom":** after any click,
+    such as opening a popup, the map would trap the page scroll again,
+    and nothing would show it was armed.
+  - Mouse drag, the +/- buttons and the keyboard work as before.
+- **Touch** (`pointer: coarse`, i.e. phones and tablets): one finger
+  scrolls the page, and two fingers pan and pinch-zoom the map.
+  - This turns off Leaflet's one-finger dragging. Leaflet's own CSS then
+    gives the map `touch-action: pan-x pan-y`, so the browser scrolls the
+    page.
+  - Leaflet's two-finger handler (`touchZoom`) both zooms and pans, so no
+    custom touch code is needed.
+  - The first one-finger swipe per page load shows "Use two fingers to
+    move the map" for 2s.
+  - A mouse-first device keeps one-finger/mouse dragging. The check
+    re-runs if the primary input changes.
+- **Slider:** `touch-action: pan-y` on the range input. A sideways finger
+  drag moves the slider and never the page. A vertical swipe that starts
+  on it still scrolls the page.
+- **Why a new file rather than `date-slider.js`:** the gestures belong to
+  the map, not the slider. Both pages load the same file, so there is
+  still one implementation.
+
+**Measured** in headless Chrome with real input events through Chrome's
+input pipeline (`Input.dispatchMouseEvent` and `dispatchTouchEvent`,
+`synthesizeScrollGesture` / `synthesizePinchGesture` with touch
+emulation). Before = the live site, old layout. After = the new layout,
+tested locally.
+
+| Size | Map, pharmacy (before -> after) | Map, shortage (before -> after) | Slider visible without scrolling | Horizontal overflow |
+|---|---|---|---|---|
+| 1920x1080 | 1620x688 -> 1620x880 | 1620x844 -> 1620x880 | yes -> yes | none -> none |
+| 1440x900 | 1140x473 -> 1140x700 | 1140x647 -> 1140x700 | yes -> yes | none -> none |
+| 1280x720 | 980x351 -> 980x520 | 980x467 -> 980x520 | yes -> yes | none -> none |
+| 768x1024 (touch) | 768x563 -> 768x824 | 768x563 -> 768x824 | yes -> yes | none -> none |
+| 375x812 (touch) | 375x447 -> 375x612 | 375x447 -> 375x612 | yes -> yes | none -> none |
+| 667x375 (touch) | 667x300 -> 667x255 | 667x300 -> 667x255 | **no -> yes** | none -> none |
+
+- **667x375:** the map is shorter on purpose. Before, its 300px minimum
+  put the map's bottom edge and the slider below the fold; now the whole
+  map and the slider fit on screen together.
+- **What scrolls** (same on both maps at every size):
+
+| Input over the map | Before | After |
+|---|---|---|
+| Mouse wheel (desktop sizes) | zoomed the map out a level; the page never scrolled | page scrolls by all it can (e.g. 227 of 227px, pharmacy at 1440x900); map zoom unchanged; event not cancelled; hint shown |
+| Ctrl + wheel / Cmd + wheel | zoomed | zooms in a level; event cancelled (no browser page zoom) |
+| Mouse drag / + button | pans / zooms | pans 109px / zooms (unchanged) |
+| One-finger swipe (touch sizes) | panned the map ~215px; page didn't move | page scrolls ~200px; map moves 0px; hint shown |
+| Two-finger drag | panned the map 85px | pans the map 85-86px; page doesn't move |
+| Two-finger pinch | zoomed in a level | zooms in a level; page zoom stays 1 |
+| Finger drag along the slider | moved it; page scroll 0 | moves it; page scroll 0 vertical, 0 horizontal |
+| Vertical swipe starting on the slider | scrolled the page ~120px | scrolls the page ~120px |
+
+**Other checks on the new layout:**
+- **Popups:** a popup opened with its anchor 12px from each of the four
+  map edges, at all six sizes on both maps, opens fully visible (0px
+  clipped). Leaflet's size matches the container everywhere, so the
+  ResizeObserver fix still holds.
+- **Sliders:** real mouse drags across the full range, partial and back,
+  at all six sizes on both maps (12 runs). Every stop agrees with a fresh
+  API response, with 0 color mismatches on the shortage map.
+- **Console:** 0 messages on all three pages.
+
+**Known gaps:**
+- **Touch hardware:** touch was tested only through Chrome's touch
+  emulation, not on a phone (see "Current state").
+- **The slider jumps where you touch it (Chrome):** Chrome's native range
+  input moves the thumb to the point a finger first touches. So on Chrome
+  phones, a vertical swipe that starts on the slider track scrolls the
+  page but also changes the date. Seen at 375 and 667 wide, identically
+  before and after this change. It's built-in browser behavior, and
+  avoiding it would mean changing the slider's logic, so it's left as is.
+- **`dvh` on a real phone:** it follows the browser toolbar as it hides
+  and shows. On a real phone the map may grow or shrink by the toolbar's
+  height (~50px) once as you scroll. If that is distracting, `svh`
+  instead of `dvh` fixes it at the cost of a slightly shorter map once
+  the toolbar hides.

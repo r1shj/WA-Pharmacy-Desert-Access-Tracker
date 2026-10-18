@@ -45,16 +45,19 @@
 
 * { box-sizing: border-box; }
 html, body {
-  margin: 0; padding: 0; height: 100%;
+  margin: 0; padding: 0;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   color: var(--text-primary);
   background: var(--page-plane);
 }
 
+/* The map pages scroll like a normal page (DECISIONS.md 2026-10-18):
+   header, then the map (legend beside it on desktop), then the slider,
+   then the notes. */
 .app {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  min-height: 100vh;
 }
 
 .app__header {
@@ -63,19 +66,38 @@ html, body {
   background: var(--surface-1);
   display: flex;
   align-items: baseline;
-  gap: 12px;
+  gap: 4px 12px;  /* tight rows when it wraps on phones: room for the map */
   flex-wrap: wrap;
 }
 .app__title { font-size: 16px; font-weight: 600; margin: 0; }
 .app__subtitle { font-size: 13px; color: var(--text-secondary); }
 
-.app__body {
-  flex: 1;
-  display: flex;
-  min-height: 0;
+.app__body { display: flex; }
+
+/* Map height: the screen minus 200px, which keeps the header, the slider
+   and the top of the notes on screen with it, within 420-900px. (70dvh
+   would have made the shortage map shorter than before on desktop.) dvh
+   tracks phone browser toolbars as they show and hide; browsers without
+   dvh (or without clamp) fall back to the vh lines. On desktop the row and
+   the map share the height, so the legend beside the map scrolls within
+   it; on phones .app__body is display: contents and only #map's height
+   applies. */
+.app__body, #map {
+  height: 70vh;
+  height: clamp(420px, calc(100vh - 200px), 900px);
+  height: clamp(420px, calc(100dvh - 200px), 900px);
+}
+/* Short screens (phones in landscape): a 420px map would push the slider
+   off the screen, so the map takes the screen minus room for the slider,
+   down to a usable 240px. Continuous with the rule above at 540px. */
+@media (max-height: 540px) {
+  .app__body, #map {
+    height: max(240px, calc(100vh - 120px));
+    height: max(240px, calc(100dvh - 120px));
+  }
 }
 
-#map { flex: 1; min-width: 0; height: 100%; }
+#map { flex: 1; min-width: 0; }
 
 .sidebar {
   width: 300px;
@@ -112,26 +134,19 @@ html, body {
 }
 .legend-gradient__caption { display: block; margin-top: 6px; font-size: 12px; }
 
-/* The notes under the slider must never squeeze the map out: cap the
-   panel and let the notes scroll, with the slider pinned at its top. */
-.app__body { min-height: 45vh; }
+/* Slider and notes flow below the map as ordinary page content. */
 .controls {
+  flex: 1;
   background: var(--surface-1);
   border-top: 1px solid var(--border);
   padding: 0 16px 14px;
-  max-height: 45vh;
-  overflow-y: auto;
 }
-#slider-root {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: var(--surface-1);
-  padding-top: 12px;
-}
+#slider-root { padding-top: 12px; }
 
 .date-slider { display: flex; align-items: center; gap: 12px; }
-.date-slider__range { flex: 1; }
+/* A finger dragging the slider sideways moves the slider, never the page;
+   a vertical swipe starting on it still scrolls the page. */
+.date-slider__range { flex: 1; min-width: 0; touch-action: pan-y; }
 .date-slider__markers { position: relative; height: 0; }
 .date-slider__readout {
   font-variant-numeric: tabular-nums;
@@ -154,8 +169,8 @@ html, body {
 .limitation-note strong { color: var(--text-primary); }
 .limitation-note:empty { display: none; }
 /* The mode note is cleared while a date loads and varies in length by
-   mode; reserve room for its longest form so the slider above it doesn't
-   jump under the cursor between drags. */
+   mode; reserve room for its longest form so the notes below it don't
+   jump between drags. */
 #mode-note, #mode-note:empty { display: block; min-height: calc(3 * 1.45em + 18px); }
 .limitation-note--error {
   color: var(--text-primary);
@@ -186,7 +201,29 @@ html, body {
   color: var(--text-primary);
 }
 
-.leaflet-popup-content { font-size: 13px; line-height: 1.5; }
+/* On-map gesture hint (map-gestures.js). It never takes input. */
+.map-gesture-hint {
+  position: absolute;
+  z-index: 1000;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-width: calc(100% - 32px);
+  padding: 8px 14px;
+  border-radius: 6px;
+  background: rgba(11, 11, 11, 0.78);
+  color: #ffffff;
+  font-size: 14px;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.map-gesture-hint.is-visible { opacity: 1; }
+
+/* Leaflet caps popup content at 300px, which with its padding is wider
+   than a 320px phone's map; keep the whole popup inside the screen. */
+.leaflet-popup-content { font-size: 13px; line-height: 1.5; max-width: calc(100vw - 64px); }
 .popup__title { font-weight: 600; margin-bottom: 4px; }
 .popup__row { color: var(--text-secondary); }
 
@@ -242,19 +279,19 @@ html, body {
 
 /* Phones and narrow windows (DECISIONS.md 2026-10-16): a 300px sidebar
    beside the map left it ~75px wide on a phone. Below 800px the page
-   scrolls instead of being a fixed-height app, and stacks: map (full
-   width), slider + load status + mode note, legend/sidebar, then the
-   other notes. The wrapper divs use display: contents so their children
-   can be reordered without changing the HTML both pages share. */
+   stacks: map (full width), slider + load status + mode note,
+   legend/sidebar, then the other notes - the legend goes below the slider
+   so the slider stays on screen with the map. The wrapper divs use
+   display: contents so their children can be reordered without changing
+   the HTML both pages share. */
 @media (max-width: 800px) {
-  .app { height: auto; min-height: 100vh; padding-bottom: 16px; }
+  .app { padding-bottom: 16px; }
   .app__body, .controls { display: contents; }
 
-  #map { order: 1; flex: none; width: 100%; height: 55vh; min-height: 300px; }
+  #map { order: 1; flex: none; width: 100%; }
 
   #slider-root {
     order: 2;
-    position: static;
     padding: 12px 16px 0;
     border-top: 1px solid var(--border);
     background: var(--surface-1);
