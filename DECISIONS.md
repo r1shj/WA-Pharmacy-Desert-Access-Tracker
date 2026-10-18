@@ -19,8 +19,9 @@ landing page plus `/map/pharmacy` and `/map/shortages`.
 **What's deployed:**
 - **Web app (`webapp/`)** on Render's free tier. It auto-deploys from
   `main` when files under `webapp/` change, because Render's root
-  directory is `webapp/`. The latest such change, the Day 10 copy and
-  layout pass, went live on 2026-10-16. Commits that only touch docs, `jobs/` or
+  directory is `webapp/`. The latest such change went live on
+  2026-10-18 (`df914b2`): taller maps on a normally scrolling page, with
+  scroll over the map scrolling the page. Commits that only touch docs, `jobs/` or
   the workflow don't redeploy. The instance sleeps after 15 idle
   minutes, so the first visit after that takes about a minute.
 - **Database:** Supabase Postgres + PostGIS, reached through its
@@ -2301,3 +2302,34 @@ tested locally.
   height (~50px) once as you scroll. If that is distracting, `svh`
   instead of `dvh` fixes it at the cost of a slightly shorter map once
   the toolbar hides.
+
+**Verified on the live site after the deploy** (`df914b2`; Render served
+`map.css` and `map-gestures.js` byte-identical to the repo):
+- **Measurements:** the same script at the same six sizes gives the same
+  numbers as the local run. Every map is 880 / 700 / 520 / 824 / 612 /
+  255px tall from 1920x1080 down to 667x375. The slider is visible
+  without scrolling everywhere, nothing overflows horizontally, and
+  Leaflet's size matches the container.
+  - Desktop maps measured 15px narrower here (e.g. 1125 instead of
+    1140px at 1440x900). That run's Chrome drew a classic 15px vertical
+    scrollbar, which a scrolling page now shows on desktops that use them
+    (Windows, or a Mac with a mouse). It is not overflow.
+- **Wheel, touch and slider gestures:** same results as the local table.
+- **Popups:** all four edges, all six sizes, both maps: 0px clipped. One
+  first run on the shortage map at 667x375 errored instead of measuring.
+  That was a test artifact: the touch steps before it had changed the
+  date, and the shortage page deliberately closes and unbinds every popup
+  until the new date loads. The test now waits for "loaded", and re-runs
+  at all three touch sizes on both maps pass.
+- **Sliders:** real mouse drags at all six sizes on both maps (12 runs:
+  latest, full range to the earliest date, partial, back to latest). Every
+  stop agrees with a fresh API response:
+  - pharmacy 2005-05-24 -> 4 locations, 2018-03-27 -> 1,418,
+    2026-10-18 -> 1,624;
+  - shortage 2012-01-01 -> 2 active, 2020-11-16 -> 24, 2026-10-18 -> 228,
+    with **0 of 5,311** colors mismatched at every stop.
+- **Console:** 0 messages on `/`, `/map/pharmacy` and `/map/shortages`;
+  0 in every layout and drag run.
+- **README screenshots** (`docs/`) retaken from the live site at 1440x1080:
+  the map is now 880px tall instead of 653 / 827, with the slider and the
+  start of the notes below it.
